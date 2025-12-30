@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}POS Sales - StockFlow{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Point of Sale</h1>
+
+<div class="row">
+    <div class="col-lg-8">
+        <input type="text" id="searchInput" class="form-control form-control-lg mb-3" placeholder="Search products by name..." onkeyup="searchProducts()">
+
+        <div class="row g-3" id="productsGrid">
+            {% for product in products %}
+            <div class="col-md-4 product-card" data-name="{{ product.name|lower }}">
+                <div class="card h-100 shadow-sm hover-shadow">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text">
+                            Stock: <strong>{{ product.current_quantity }}</strong><br>
+                            Price: <strong>KSh {{ "%.2f"|format(product.selling_price) }}</strong>
+                        </p>
+                        <button class="btn btn-primary add-to-cart" data-id="{{ product._id }}" data-name="{{ product.name }}" data-price="{{ product.selling_price }}">
+                            <i class="fas fa-cart-plus"></i> Add to Cart
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow sticky-top" style="top: 20px;">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Cart</h5>
+            </div>
+            <div class="card-body">
+                <div id="cartItems"></div>
+                <hr>
+                <h4 class="text-end">Total: <span id="cartTotal">KSh 0.00</span></h4>
+            </div>
+            <div class="card-footer">
+                <button class="btn btn-success btn-lg w-100" id="checkoutBtn" disabled>
+                    <i class="fas fa-cash-register me-2"></i>Checkout
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let cart = [];
+
+function searchProducts() {
+    let input = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('.product-card').forEach(card => {
+        let name = card.dataset.name;
+        card.style.display = name.includes(input) ? '' : 'none';
+    });
+}
+
+document.querySelectorAll('.add-to-cart').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const id = this.dataset.id;
+        const name = this.dataset.name;
+        const price = parseFloat(this.dataset.price);
+        
+        const existing = cart.find(item => item.id === id);
+        if (existing) {
+            existing.quantity += 1;
+        } else {
+            cart.push({ id, name, price, quantity: 1 });
+        }
+        updateCart();
+    });
+});
+
+function updateCart() {
+    const container = document.getElementById('cartItems');
+    container.innerHTML = '';
+    let total = 0;
+
+    cart.forEach((item, index) => {
+        const lineTotal = item.quantity * item.price;
+        total += lineTotal;
+
+        const div = document.createElement('div');
+        div.className = 'd-flex justify-content-between mb-2';
+        div.innerHTML = `
+            <div>
+                <strong>${item.name}</strong><br>
+                <small>${item.quantity} × KSh ${item.price.toFixed(2)}</small>
+            </div>
+            <div>
+                <strong>KSh ${lineTotal.toFixed(2)}</strong>
+                <button class="btn btn-sm btn-danger ms-2 remove-item" data-index="${index}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+
+    document.getElementById('cartTotal').textContent = 'KSh ' + total.toFixed(2);
+    document.getElementById('checkoutBtn').disabled = cart.length === 0;
+}
+
+document.getElementById('cartItems').addEventListener('click', function(e) {
+    if (e.target.closest('.remove-item')) {
+        const index = e.target.closest('.remove-item').dataset.index;
+        cart.splice(index, 1);
+        updateCart();
+    }
+});
+
+document.getElementById('checkoutBtn').addEventListener('click', function() {
+    if (cart.length === 0) return;
+
+    const items = cart.map(item => ({
+        product_id: item.id,
+        quantity: item.quantity,
+        selling_price: item.price
+    }));
+
+    fetch('/pos/checkout', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({items: items})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Sale completed!');
+            cart = [];
+            updateCart();
+            window.location.href = data.redirect;
+        } else {
+            alert(data.message);
+        }
+    });
+});
+</script>
+
+<style>
+.product-card {
+    transition: transform 0.2s;
+}
+.product-card:hover {
+    transform: translateY(-5px);
+}
+.hover-shadow:hover {
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
+}
+</style>
+{% endblock %}

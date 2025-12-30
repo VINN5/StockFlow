@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Purchases - StockFlow{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Purchase History</h1>
+
+<a href="/purchases/new" class="btn btn-primary mb-4">
+    <i class="fas fa-plus me-2"></i>Record New Purchase
+</a>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>Date</th>
+                <th>Supplier</th>
+                <th>Items</th>
+                <th>Total Cost</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for purchase in purchases %}
+            <tr>
+                <td>{{ purchase.date.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ purchase.supplier_name }}</td>
+                <td>
+                    <ul class="mb-0">
+                        {% for item in purchase.items %}
+                        <li>{{ item.quantity }} × {{ item.product_name }} @ KSh {{ "%.2f"|format(item.cost_price) }}</li>
+                        {% endfor %}
+                    </ul>
+                </td>
+                <td><strong>KSh {{ "%.2f"|format(purchase.total_cost) }}</strong></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center py-5 text-muted">No purchases recorded yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
