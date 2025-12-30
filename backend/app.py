@@ -1,4 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+import sys
+import os
+
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config import Config
 from pymongo import MongoClient
 from flask_bcrypt import Bcrypt
@@ -9,7 +15,6 @@ from routes.purchases import bp as purchases_bp
 from routes.pos import bp as pos_bp
 from datetime import datetime
 from bson.objectid import ObjectId
-import os 
 
 app = Flask(__name__, template_folder='../frontend/templates', static_folder='../frontend/static')
 app.config.from_object(Config)
@@ -145,6 +150,5 @@ def server_error(e):
 
 
 if __name__ == '__main__':
-    
     port = int(os.environ.get('PORT', 8000))
     app.run(debug=False, host='0.0.0.0', port=port)
