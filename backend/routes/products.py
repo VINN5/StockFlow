@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app as app
-from models.product import Product
+from ..models.product import Product  
 from bson.objectid import ObjectId  
 
 bp = Blueprint('products', __name__, url_prefix='/products')
@@ -49,7 +49,7 @@ def edit(product_id):
             "purchase_price": float(request.form['purchase_price']),
             "selling_price": float(request.form['selling_price']),
             "min_stock": int(request.form['min_stock']),
-            "max_stock": int(request.form['max_stock']) if request.form.get('max_stock') else None,
+            "max_stock": int(request.form.get('max_stock')) if request.form.get('max_stock') else None,
             "current_quantity": int(request.form.get('current_quantity', product['current_quantity']))
         }
         app.db.products.update_one({"_id": ObjectId(product_id)}, {"$set": updated})
