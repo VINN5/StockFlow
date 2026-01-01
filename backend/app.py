@@ -13,6 +13,7 @@ from .routes.products import bp as products_bp
 from .routes.suppliers import bp as suppliers_bp
 from .routes.purchases import bp as purchases_bp
 from .routes.pos import bp as pos_bp
+from .routes.sales import bp as sales_bp
 
 
 app = Flask(
@@ -36,6 +37,7 @@ app.register_blueprint(products_bp)
 app.register_blueprint(suppliers_bp)
 app.register_blueprint(purchases_bp)
 app.register_blueprint(pos_bp)
+app.register_blueprint(sales_bp)
 
 
 @app.route('/')

@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app as app, jsonify
-from models.supplier import Supplier
+from ..models.supplier import Supplier
 from bson.objectid import ObjectId
 from datetime import datetime  
 
