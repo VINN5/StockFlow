@@ -177,7 +177,7 @@ def delete_user(user_id):
     return redirect(url_for('users'))
 
 
-
+# ==================== SUPER ADMIN: BUSINESSES MANAGEMENT ====================
 
 @app.route('/businesses')
 def businesses():
@@ -185,8 +185,24 @@ def businesses():
         flash('Access denied: Super Admin only', 'danger')
         return redirect(url_for('dashboard'))
     
+    # Fetch all businesses, sorted newest first
     all_businesses = list(db.businesses.find().sort("created_at", -1))
-    return render_template('businesses.html', businesses=all_businesses)
+    
+    # Build enriched list with admin usernames
+    businesses_with_admins = []
+    for biz in all_businesses:
+        admins = list(db.users.find(
+            {"business_id": biz['_id'], "role": "admin"},
+            {"username": 1, "_id": 0}
+        ))
+        admin_usernames = [admin['username'] for admin in admins]
+        
+        businesses_with_admins.append({
+            "business": biz,
+            "admins": admin_usernames
+        })
+    
+    return render_template('businesses.html', businesses=businesses_with_admins)
 
 
 @app.route('/businesses/create', methods=['POST'])
