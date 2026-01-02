@@ -6,7 +6,7 @@ from bson.objectid import ObjectId
 from pymongo import MongoClient
 from flask_bcrypt import Bcrypt
 
-# ✅ Proper relative imports
+
 from .config import Config
 from .models.user import User
 from .routes.products import bp as products_bp
@@ -22,16 +22,13 @@ app = Flask(
     static_folder='../frontend/static'
 )
 
-
 app.config.from_object(Config)
 app.secret_key = app.config['SECRET_KEY']
-
 
 bcrypt = Bcrypt(app)
 client = MongoClient(app.config["MONGODB_URI"])
 db = client.stockflow
 app.db = db
-
 
 app.register_blueprint(products_bp)
 app.register_blueprint(suppliers_bp)
@@ -58,6 +55,18 @@ def login():
             session['user_id'] = str(user['_id'])
             session['username'] = user['username']
             session['role'] = user['role']
+            
+           
+            session['business_id'] = str(user['business_id']) if user.get('business_id') else None
+            
+            
+            if user.get('business_id'):
+                business = db.businesses.find_one({"_id": user['business_id']})
+                session['business_name'] = business['name'] if business else "Unknown"
+            else:
+                session['business_name'] = "All Businesses (Super Admin)"
+
+            flash(f'Welcome back, {user["username"]}!', 'success')
             return redirect(url_for('dashboard'))
 
         flash('Invalid username or password', 'error')
@@ -74,9 +83,13 @@ def signup():
         if db.users.find_one({"username": username}):
             flash('Username already exists', 'error')
         else:
-            role = "admin" if db.users.count_documents({}) == 0 else "cashier"
+            
+            role = "super_admin" if db.users.count_documents({}) == 0 else "cashier"
             user = User(username, password, role)
-            db.users.insert_one(user.to_dict())
+            user_dict = user.to_dict()
+            if role != "super_admin":
+                user_dict['business_id'] = None  
+            db.users.insert_one(user_dict)
             flash('Account created successfully! Please log in.', 'success')
             return redirect(url_for('login'))
 
@@ -88,6 +101,7 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
+    
     products = list(db.products.find())
 
     total_products = len(products)
@@ -111,23 +125,25 @@ def dashboard():
         potential_sales_value=potential_sales_value,
         total_sales=0,
         low_stock_count=len(low_stock_items),
-        low_stock_items=low_stock_items
+        low_stock_items=low_stock_items,
+        business_name=session.get('business_name', 'StockFlow')  # Pass to template
     )
 
 
 @app.route('/users')
 def users():
-    if 'user_id' not in session or session.get('role') != 'admin':
+    if 'user_id' not in session or session.get('role') not in ['admin', 'super_admin']:
         flash('Admin access required', 'danger')
         return redirect(url_for('dashboard'))
 
+    
     all_users = list(db.users.find())
     return render_template('users.html', users=all_users)
 
 
 @app.route('/users/add', methods=['POST'])
 def add_user():
-    if 'user_id' not in session or session.get('role') != 'admin':
+    if 'user_id' not in session or session.get('role') not in ['admin', 'super_admin']:
         return redirect(url_for('login'))
 
     username = request.form['username']
@@ -138,12 +154,14 @@ def add_user():
         flash('Username already exists', 'danger')
     else:
         hashed = bcrypt.generate_password_hash(password).decode('utf-8')
-        db.users.insert_one({
+        new_user = {
             "username": username,
             "password_hash": hashed,
             "role": role,
-            "created_at": datetime.utcnow()
-        })
+            "created_at": datetime.utcnow(),
+            "business_id": None 
+        }
+        db.users.insert_one(new_user)
         flash('User added successfully!', 'success')
 
     return redirect(url_for('users'))
@@ -151,7 +169,7 @@ def add_user():
 
 @app.route('/users/delete/<user_id>')
 def delete_user(user_id):
-    if 'user_id' not in session or session.get('role') != 'admin':
+    if 'user_id' not in session or session.get('role') not in ['admin', 'super_admin']:
         return redirect(url_for('login'))
 
     if user_id == session['user_id']:
