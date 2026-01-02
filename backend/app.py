@@ -56,13 +56,12 @@ def login():
             session['username'] = user['username']
             session['role'] = user['role']
             
-           
+            
             session['business_id'] = str(user['business_id']) if user.get('business_id') else None
             
-            
             if user.get('business_id'):
-                business = db.businesses.find_one({"_id": user['business_id']})
-                session['business_name'] = business['name'] if business else "Unknown"
+                business = db.businesses.find_one({"_id": ObjectId(user['business_id'])})
+                session['business_name'] = business['name'] if business else "Unknown Business"
             else:
                 session['business_name'] = "All Businesses (Super Admin)"
 
@@ -83,7 +82,6 @@ def signup():
         if db.users.find_one({"username": username}):
             flash('Username already exists', 'error')
         else:
-            
             role = "super_admin" if db.users.count_documents({}) == 0 else "cashier"
             user = User(username, password, role)
             user_dict = user.to_dict()
@@ -101,7 +99,6 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    
     products = list(db.products.find())
 
     total_products = len(products)
@@ -126,7 +123,7 @@ def dashboard():
         total_sales=0,
         low_stock_count=len(low_stock_items),
         low_stock_items=low_stock_items,
-        business_name=session.get('business_name', 'StockFlow')  # Pass to template
+        business_name=session.get('business_name', 'StockFlow')
     )
 
 
@@ -136,7 +133,6 @@ def users():
         flash('Admin access required', 'danger')
         return redirect(url_for('dashboard'))
 
-    
     all_users = list(db.users.find())
     return render_template('users.html', users=all_users)
 
@@ -179,6 +175,59 @@ def delete_user(user_id):
     db.users.delete_one({"_id": ObjectId(user_id)})
     flash('User deleted', 'info')
     return redirect(url_for('users'))
+
+
+
+
+@app.route('/businesses')
+def businesses():
+    if 'user_id' not in session or session.get('role') != 'super_admin':
+        flash('Access denied: Super Admin only', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    all_businesses = list(db.businesses.find().sort("created_at", -1))
+    return render_template('businesses.html', businesses=all_businesses)
+
+
+@app.route('/businesses/create', methods=['POST'])
+def create_business():
+    if 'user_id' not in session or session.get('role') != 'super_admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    business_name = request.form.get('business_name', '').strip()
+    location = request.form.get('location', '').strip()
+    admin_username = request.form.get('admin_username', '').strip()
+    admin_password = request.form.get('admin_password', '')
+    
+    if not all([business_name, admin_username, admin_password]):
+        flash('All fields are required', 'danger')
+        return redirect(url_for('businesses'))
+    
+    if db.users.find_one({"username": admin_username}):
+        flash('Username already exists', 'danger')
+        return redirect(url_for('businesses'))
+    
+    
+    business_result = db.businesses.insert_one({
+        "name": business_name,
+        "location": location,
+        "created_at": datetime.utcnow()
+    })
+    business_id = business_result.inserted_id
+    
+    
+    hashed = bcrypt.generate_password_hash(admin_password).decode('utf-8')
+    db.users.insert_one({
+        "username": admin_username,
+        "password_hash": hashed,
+        "role": "admin",
+        "business_id": business_id,
+        "created_at": datetime.utcnow()
+    })
+    
+    flash(f'Business "{business_name}" created with admin "{admin_username}"!', 'success')
+    return redirect(url_for('businesses'))
 
 
 @app.route('/logout')

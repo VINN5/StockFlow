@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Businesses - StockFlow{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Business Management</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Create New Business & Admin</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('create_business') }}">
+                        <div class="mb-3">
+                            <label class="form-label">Business Name</label>
+                            <input type="text" name="business_name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Location</label>
+                            <input type="text" name="location" class="form-control" placeholder="e.g., Thika, Kenya" required>
+                        </div>
+                        <hr>
+                        <h6>New Branch Admin</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Admin Username</label>
+                            <input type="text" name="admin_username" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Admin Password</label>
+                            <input type="password" name="admin_password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-success">Create Business & Admin</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <h3>Existing Businesses</h3>
+    {% if businesses %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Location</th>
+                    <th>Created</th>
+                    <th>Admin Users</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for biz in businesses %}
+                <tr>
+                    <td><strong>{{ biz.name }}</strong></td>
+                    <td>{{ biz.location }}</td>
+                    <td>{{ biz.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        {% set admins = db.users.find({"business_id": biz._id, "role": "admin"}) %}
+                        {% for admin in admins %}
+                            {{ admin.username }}{% if not loop.last %}, {% endif %}
+                        {% else %}
+                            <em>No admin assigned</em>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>No businesses yet. Create one above!</p>
+    {% endif %}
+</div>
+{% endblock %}
