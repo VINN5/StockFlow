@@ -4,66 +4,77 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Business Management</h1>
+    <h1 class="mb-4 text-primary"><i class="fas fa-building me-2"></i>Business Management</h1>
     
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Create New Business & Admin</h5>
+    <!-- Create New Business Form -->
+    <div class="row mb-5">
+        <div class="col-lg-9">
+            <div class="card shadow border-0">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Create New Business & Branch Admin</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('create_business') }}">
-                        <div class="mb-3">
-                            <label class="form-label">Business Name</label>
-                            <input type="text" name="business_name" class="form-control" required>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Business Name</label>
+                                <input type="text" name="business_name" class="form-control" placeholder="e.g., Thika Branch" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Location</label>
+                                <input type="text" name="location" class="form-control" placeholder="e.g., Thika, Kenya" required>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Location</label>
-                            <input type="text" name="location" class="form-control" placeholder="e.g., Thika, Kenya" required>
+                        <hr class="my-4">
+                        <h6 class="text-primary mb-3">Branch Admin Account</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Admin Username</label>
+                                <input type="text" name="admin_username" class="form-control" placeholder="e.g., thika_manager" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Admin Password</label>
+                                <input type="password" name="admin_password" class="form-control" required>
+                            </div>
                         </div>
-                        <hr>
-                        <h6>New Branch Admin</h6>
-                        <div class="mb-3">
-                            <label class="form-label">Admin Username</label>
-                            <input type="text" name="admin_username" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Admin Password</label>
-                            <input type="password" name="admin_password" class="form-control" required>
-                        </div>
-                        <button type="submit" class="btn btn-success">Create Business & Admin</button>
+                        <button type="submit" class="btn btn-success btn-lg px-5">
+                            <i class="fas fa-save me-2"></i>Create Business & Admin
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Existing Businesses List -->
+    <h3 class="text-primary mb-4"><i class="fas fa-list me-2"></i>Existing Businesses</h3>
     
-    <h3>Existing Businesses</h3>
     {% if businesses %}
     <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
+        <table class="table table-hover table-striped align-middle shadow-sm">
+            <thead class="table-dark">
                 <tr>
-                    <th>Name</th>
+                    <th>Business Name</th>
                     <th>Location</th>
                     <th>Created</th>
-                    <th>Admin Users</th>
+                    <th>Branch Admins</th>
                 </tr>
             </thead>
             <tbody>
-                {% for biz in businesses %}
+                {% for item in businesses %}
+                {% set biz = item.business %}
                 <tr>
                     <td><strong>{{ biz.name }}</strong></td>
-                    <td>{{ biz.location }}</td>
-                    <td>{{ biz.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ biz.location or '—' }}</td>
+                    <td>{{ biz.created_at.strftime('%b %d, %Y') }}</td>
                     <td>
-                        {% set admins = db.users.find({"business_id": biz._id, "role": "admin"}) %}
-                        {% for admin in admins %}
-                            {{ admin.username }}{% if not loop.last %}, {% endif %}
+                        {% if item.admins %}
+                            {% for username in item.admins %}
+                            <span class="badge bg-primary me-1">{{ username }}</span>
+                            {% endfor %}
                         {% else %}
-                            <em>No admin assigned</em>
-                        {% endfor %}
+                            <em class="text-muted">No admin assigned</em>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -71,7 +82,9 @@
         </table>
     </div>
     {% else %}
-    <p>No businesses yet. Create one above!</p>
+    <div class="alert alert-info shadow-sm">
+        <i class="fas fa-info-circle me-2"></i>No businesses created yet. Use the form above to add your first branch!
+    </div>
     {% endif %}
 </div>
 {% endblock %}
