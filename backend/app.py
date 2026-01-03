@@ -99,33 +99,61 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    products = list(db.products.find())
+    user_role = session.get('role')
 
-    total_products = len(products)
-    total_stock_value = sum(
-        p.get('current_quantity', 0) * p.get('purchase_price', 0)
-        for p in products
-    )
-    potential_sales_value = sum(
-        p.get('current_quantity', 0) * p.get('selling_price', 0)
-        for p in products
-    )
-
-    low_stock_items = [
-        p for p in products if p.get('current_quantity', 0) < p.get('min_stock', 10)
-    ]
-
-    return render_template(
-        'dashboard.html',
-        total_products=total_products,
-        total_stock_value=total_stock_value,
-        potential_sales_value=potential_sales_value,
-        total_sales=0,
-        low_stock_count=len(low_stock_items),
-        low_stock_items=low_stock_items,
-        business_name=session.get('business_name', 'StockFlow')
-    )
-
+    if user_role == 'super_admin':
+        
+        total_businesses = db.businesses.count_documents({})
+        total_users = db.users.count_documents({})
+        
+       
+        all_users = list(db.users.find({}, {
+            "username": 1,
+            "role": 1,
+            "business_id": 1,
+            "created_at": 1
+        }).sort("created_at", -1))
+        
+        
+        users_with_business = []
+        for user in all_users:
+            business_name = "—"
+            if user.get('business_id'):
+                biz = db.businesses.find_one({"_id": user['business_id']}, {"name": 1})
+                business_name = biz['name'] if biz else "Unknown"
+            users_with_business.append({
+                "username": user['username'],
+                "role": user['role'],
+                "business": business_name,
+                "created": user['created_at'].strftime('%b %d, %Y')
+            })
+        
+       
+        all_businesses = list(db.businesses.find().sort("created_at", -1))
+        
+        return render_template('dashboard.html',
+                               is_super_admin=True,
+                               total_businesses=total_businesses,
+                               total_users=total_users,
+                               users=users_with_business,
+                               businesses=all_businesses,
+                               business_name="System Control Panel")
+    else:
+        
+        products = list(db.products.find())
+        
+        total_products = len(products)
+        total_stock_value = sum(p.get('current_quantity', 0) * p.get('purchase_price', 0) for p in products)
+        potential_sales_value = sum(p.get('current_quantity', 0) * p.get('selling_price', 0) for p in products)
+        low_stock_count = len([p for p in products if p.get('current_quantity', 0) < p.get('min_stock', 10)])
+        
+        return render_template('dashboard.html',
+                               is_super_admin=False,
+                               total_products=total_products,
+                               total_stock_value=total_stock_value,
+                               potential_sales_value=potential_sales_value,
+                               low_stock_count=low_stock_count,
+                               business_name=session.get('business_name', 'StockFlow'))
 
 @app.route('/users')
 def users():
