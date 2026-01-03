@@ -243,7 +243,7 @@ def create_business():
     })
     
     flash(f'Business "{business_name}" created with admin "{admin_username}"!', 'success')
-    return redirect(url_for('businesses'))
+    return redirect(url_for('businesses') + '?t=' + str(int(datetime.utcnow().timestamp())))
 
 
 @app.route('/businesses/delete/<business_id>', methods=['POST'])
