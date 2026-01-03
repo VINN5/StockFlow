@@ -6,7 +6,7 @@
 <div class="container mt-4">
     <h1 class="mb-4 text-primary"><i class="fas fa-building me-2"></i>Business Management</h1>
     
-    <!-- Create New Business Form -->
+   
     <div class="row mb-5">
         <div class="col-lg-9">
             <div class="card shadow border-0">
@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    <!-- Existing Businesses List -->
+      
     <h3 class="text-primary mb-4"><i class="fas fa-list me-2"></i>Existing Businesses</h3>
     
     {% if businesses %}
@@ -58,6 +58,7 @@
                     <th>Location</th>
                     <th>Created</th>
                     <th>Branch Admins</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -75,6 +76,15 @@
                         {% else %}
                             <em class="text-muted">No admin assigned</em>
                         {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_business', business_id=biz._id) }}" 
+                              onsubmit="return confirm('Are you sure you want to delete \"{{ biz.name }}\"? This will also delete its branch admin(s). This action cannot be undone.');"
+                              style="display: inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}

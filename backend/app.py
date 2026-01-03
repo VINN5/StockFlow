@@ -246,6 +246,41 @@ def create_business():
     return redirect(url_for('businesses'))
 
 
+@app.route('/businesses/delete/<business_id>', methods=['POST'])
+def delete_business(business_id):
+    if 'user_id' not in session or session.get('role') != 'super_admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        obj_id = ObjectId(business_id)
+    except:
+        flash('Invalid business ID', 'danger')
+        return redirect(url_for('businesses'))
+    
+    
+    business = db.businesses.find_one({"_id": obj_id})
+    if not business:
+        flash('Business not found', 'danger')
+        return redirect(url_for('businesses'))
+    
+    business_name = business['name']
+    
+    
+    delete_admins_result = db.users.delete_many({
+        "business_id": obj_id,
+        "role": "admin"
+    })
+    admins_deleted = delete_admins_result.deleted_count
+    
+    
+    db.businesses.delete_one({"_id": obj_id})
+    
+    flash(f'Business "{business_name}" deleted successfully. '
+          f'{admins_deleted} branch admin(s) also removed.', 'success')
+    
+    return redirect(url_for('businesses'))
+
 @app.route('/logout')
 def logout():
     session.clear()
