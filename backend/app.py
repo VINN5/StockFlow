@@ -37,6 +37,19 @@ app.register_blueprint(pos_bp)
 app.register_blueprint(sales_bp)
 
 
+def get_business_query():
+    """Return MongoDB query filter for business_id based on user role"""
+    if session.get('role') == 'super_admin':
+        return {}
+    business_id = session.get('business_id')
+    if business_id:
+        try:
+            return {"business_id": ObjectId(business_id)}
+        except:
+            return {}
+    return {}
+
+
 @app.route('/')
 def index():
     if 'user_id' in session:
@@ -55,7 +68,6 @@ def login():
             session['user_id'] = str(user['_id'])
             session['username'] = user['username']
             session['role'] = user['role']
-            
             
             session['business_id'] = str(user['business_id']) if user.get('business_id') else None
             
@@ -102,18 +114,16 @@ def dashboard():
     user_role = session.get('role')
 
     if user_role == 'super_admin':
-        
+        # Super Admin: System management view
         total_businesses = db.businesses.count_documents({})
         total_users = db.users.count_documents({})
         
-       
         all_users = list(db.users.find({}, {
             "username": 1,
             "role": 1,
             "business_id": 1,
             "created_at": 1
         }).sort("created_at", -1))
-        
         
         users_with_business = []
         for user in all_users:
@@ -128,7 +138,6 @@ def dashboard():
                 "created": user['created_at'].strftime('%b %d, %Y')
             })
         
-       
         all_businesses = list(db.businesses.find().sort("created_at", -1))
         
         return render_template('dashboard.html',
@@ -139,8 +148,9 @@ def dashboard():
                                businesses=all_businesses,
                                business_name="System Control Panel")
     else:
-        
-        products = list(db.products.find())
+        # Branch Admin / Cashier: Operational view with filtered data
+        query = get_business_query()
+        products = list(db.products.find(query))
         
         total_products = len(products)
         total_stock_value = sum(p.get('current_quantity', 0) * p.get('purchase_price', 0) for p in products)
@@ -155,13 +165,15 @@ def dashboard():
                                low_stock_count=low_stock_count,
                                business_name=session.get('business_name', 'StockFlow'))
 
+
 @app.route('/users')
 def users():
     if 'user_id' not in session or session.get('role') not in ['admin', 'super_admin']:
         flash('Admin access required', 'danger')
         return redirect(url_for('dashboard'))
 
-    all_users = list(db.users.find())
+    query = get_business_query()
+    all_users = list(db.users.find(query).sort("created_at", -1))
     return render_template('users.html', users=all_users)
 
 
@@ -213,10 +225,8 @@ def businesses():
         flash('Access denied: Super Admin only', 'danger')
         return redirect(url_for('dashboard'))
     
-    # Fetch all businesses, sorted newest first
     all_businesses = list(db.businesses.find().sort("created_at", -1))
     
-    # Build enriched list with admin usernames
     businesses_with_admins = []
     for biz in all_businesses:
         admins = list(db.users.find(
@@ -252,14 +262,12 @@ def create_business():
         flash('Username already exists', 'danger')
         return redirect(url_for('businesses'))
     
-    
     business_result = db.businesses.insert_one({
         "name": business_name,
         "location": location,
         "created_at": datetime.utcnow()
     })
     business_id = business_result.inserted_id
-    
     
     hashed = bcrypt.generate_password_hash(admin_password).decode('utf-8')
     db.users.insert_one({
@@ -286,7 +294,6 @@ def delete_business(business_id):
         flash('Invalid business ID', 'danger')
         return redirect(url_for('businesses'))
     
-    
     business = db.businesses.find_one({"_id": obj_id})
     if not business:
         flash('Business not found', 'danger')
@@ -294,13 +301,11 @@ def delete_business(business_id):
     
     business_name = business['name']
     
-    
     delete_admins_result = db.users.delete_many({
         "business_id": obj_id,
         "role": "admin"
     })
     admins_deleted = delete_admins_result.deleted_count
-    
     
     db.businesses.delete_one({"_id": obj_id})
     
@@ -308,6 +313,7 @@ def delete_business(business_id):
           f'{admins_deleted} branch admin(s) also removed.', 'success')
     
     return redirect(url_for('businesses'))
+
 
 @app.route('/logout')
 def logout():
