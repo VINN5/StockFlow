@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Payments Received - StockFlow{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Payments Received</h1>
+    
+    <div class="mb-4 text-end">
+        <a href="{{ url_for('payments.new') }}" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i>Record New Payment
+        </a>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Client</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Recorded By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.date.strftime('%b %d, %Y %H:%M') }}</td>
+                    <td><strong>{{ payment.client_name }}</strong></td>
+                    <td>KSh {{ "%.2f"|format(payment.amount) }}</td>
+                    <td>{{ payment.method }}</td>
+                    <td>{{ payment.recorded_by }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted">No payments recorded yet</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

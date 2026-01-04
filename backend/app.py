@@ -15,6 +15,7 @@ from .routes.purchases import bp as purchases_bp
 from .routes.pos import bp as pos_bp
 from .routes.sales import bp as sales_bp
 from .routes.clients import bp as clients_bp
+from .routes.payments import bp as payments_bp
 
 
 app = Flask(
@@ -37,6 +38,7 @@ app.register_blueprint(purchases_bp)
 app.register_blueprint(pos_bp)
 app.register_blueprint(sales_bp)
 app.register_blueprint(clients_bp)
+app.register_blueprint(payments_bp)
 
 def get_business_query():
     """Return MongoDB query filter for business_id based on user role"""

@@ -92,23 +92,30 @@
                     <i class="fas fa-cash-register"></i> POS Sales
                 </a>
 
-                <!-- Clients link: visible to admin and super_admin -->
+                
                 {% if session.role in ['admin', 'super_admin'] %}
                 <a class="nav-link {% if request.path.startswith('/clients') %}active{% endif %}" href="/clients">
                     <i class="fas fa-user-friends"></i> Clients
                 </a>
                 {% endif %}
 
+                
+                {% if session.role in ['admin', 'super_admin'] %}
+                <a class="nav-link {% if request.path.startswith('/payments') %}active{% endif %}" href="/payments">
+                    <i class="fas fa-money-bill-wave"></i> Payments
+                </a>
+                {% endif %}
+
                 <hr class="border-light opacity-50">
 
-                <!-- Users link: visible to admin and super_admin -->
+                
                 {% if session.role in ['admin', 'super_admin'] %}
                 <a class="nav-link {% if request.path.startswith('/users') %}active{% endif %}" href="/users">
                     <i class="fas fa-users"></i> Users
                 </a>
                 {% endif %}
 
-                <!-- Businesses link: ONLY for super_admin -->
+                
                 {% if session.role == 'super_admin' %}
                 <a class="nav-link {% if request.path.startswith('/businesses') %}active{% endif %}" href="{{ url_for('businesses') }}">
                     <i class="fas fa-building"></i> Businesses
