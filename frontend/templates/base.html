@@ -92,6 +92,13 @@
                     <i class="fas fa-cash-register"></i> POS Sales
                 </a>
 
+                <!-- Clients link: visible to admin and super_admin -->
+                {% if session.role in ['admin', 'super_admin'] %}
+                <a class="nav-link {% if request.path.startswith('/clients') %}active{% endif %}" href="/clients">
+                    <i class="fas fa-user-friends"></i> Clients
+                </a>
+                {% endif %}
+
                 <hr class="border-light opacity-50">
 
                 <!-- Users link: visible to admin and super_admin -->
