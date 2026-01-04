@@ -21,13 +21,17 @@ def index():
         return redirect(url_for('login'))
     
     query = get_business_query()
-    # Only in-stock products from user's business
+    
+   
     products = list(current_app.db.products.find({
         **query,
         "current_quantity": {"$gt": 0}
     }).sort("name", 1))
     
-    return render_template('pos.html', products=products)
+    
+    clients = list(current_app.db.clients.find(query).sort("name", 1))
+    
+    return render_template('pos.html', products=products, clients=clients)
 
 @bp.route('/checkout', methods=['POST'])
 def checkout():
@@ -37,9 +41,10 @@ def checkout():
     data = request.get_json()
     items = data['items']
     total_amount = sum(item['quantity'] * item['selling_price'] for item in items)
-    payment_method = data.get('payment_method', 'cash')
+    payment_method = data.get('payment_method', 'cash')  # 'cash' or 'credit'
+    client_id = data.get('client_id')  
     
-    # Validate stock and update
+    
     for item in items:
         product_id = ObjectId(item['product_id'])
         result = current_app.db.products.update_one(
@@ -51,7 +56,7 @@ def checkout():
             name = product['name'] if product else 'Unknown'
             return jsonify({'success': False, 'message': f'Not enough stock for {name}'}), 400
     
-    # Create sale with business_id
+    
     sale = {
         "items": items,
         "total_amount": total_amount,
@@ -61,16 +66,28 @@ def checkout():
         "cashier_name": session['username']
     }
     
+   
+    if client_id:
+        sale['client_id'] = ObjectId(client_id)
+    
+    
     if session.get('role') != 'super_admin':
         business_id = session.get('business_id')
         if business_id:
             try:
                 sale['business_id'] = ObjectId(business_id)
             except:
-                pass  # fallback
+                pass
     
     result = current_app.db.sales.insert_one(sale)
     sale_id = str(result.inserted_id)
+    
+    
+    if payment_method == 'credit' and client_id:
+        current_app.db.clients.update_one(
+            {"_id": ObjectId(client_id)},
+            {"$inc": {"balance": total_amount}}
+        )
     
     receipt_url = url_for('pos.receipt', sale_id=sale_id)
     return jsonify({
@@ -105,9 +122,16 @@ def receipt(sale_id):
         flash('Sale not found or access denied', 'danger')
         return redirect(url_for('pos.index'))
     
+    
+    client_name = None
+    if sale.get('client_id'):
+        client = current_app.db.clients.find_one({"_id": sale['client_id']})
+        client_name = client['name'] if client else 'Unknown Client'
+    
+    
     for item in sale['items']:
         product = current_app.db.products.find_one({"_id": ObjectId(item['product_id'])})
         item['product_name'] = product['name'] if product else 'Unknown'
         item['line_total'] = item['quantity'] * item['selling_price']
     
-    return render_template('pos_receipt.html', sale=sale)
+    return render_template('pos_receipt.html', sale=sale, client_name=client_name)

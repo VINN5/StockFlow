@@ -35,6 +35,31 @@
                 <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Cart</h5>
             </div>
             <div class="card-body">
+                <!-- Client Selection -->
+                <div class="mb-3">
+                    <label for="clientSelect" class="form-label fw-bold">Client (Optional)</label>
+                    <select class="form-select" id="clientSelect">
+                        <option value="">Cash Sale - No Client</option>
+                        {% for client in clients %}
+                        <option value="{{ client._id }}">{{ client.name }} {% if client.contact %}({{ client.contact }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="mb-3">
+                    <label for="paymentMethod" class="form-label fw-bold">Payment Method</label>
+                    <select class="form-select" id="paymentMethod">
+                        <option value="cash">Cash</option>
+                        <option value="credit">Credit (Add to Client Balance)</option>
+                    </select>
+                    <div class="form-text">
+                        Select a client above to enable credit option.
+                    </div>
+                </div>
+
+                <hr>
+
                 <div id="cartItems"></div>
                 <hr>
                 <h4 class="text-end">Total: <span id="cartTotal">KSh 0.00</span></h4>
@@ -113,8 +138,28 @@ document.getElementById('cartItems').addEventListener('click', function(e) {
     }
 });
 
+
+document.getElementById('clientSelect').addEventListener('change', function() {
+    const paymentMethod = document.getElementById('paymentMethod');
+    if (this.value === '') {
+        paymentMethod.value = 'cash';
+        paymentMethod.disabled = true;
+    } else {
+        paymentMethod.disabled = false;
+    }
+});
+
 document.getElementById('checkoutBtn').addEventListener('click', function() {
     if (cart.length === 0) return;
+
+    const clientId = document.getElementById('clientSelect').value || null;
+    const paymentMethod = document.getElementById('paymentMethod').value;
+
+    // If credit selected but no client, warn
+    if (paymentMethod === 'credit' && !clientId) {
+        alert('Please select a client for credit sale');
+        return;
+    }
 
     const items = cart.map(item => ({
         product_id: item.id,
@@ -125,7 +170,11 @@ document.getElementById('checkoutBtn').addEventListener('click', function() {
     fetch('/pos/checkout', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({items: items})
+        body: JSON.stringify({
+            items: items,
+            payment_method: paymentMethod,
+            client_id: clientId
+        })
     })
     .then(response => response.json())
     .then(data => {
@@ -135,8 +184,12 @@ document.getElementById('checkoutBtn').addEventListener('click', function() {
             updateCart();
             window.location.href = data.redirect;
         } else {
-            alert(data.message);
+            alert(data.message || 'Sale failed');
         }
+    })
+    .catch(err => {
+        alert('Error processing sale');
+        console.error(err);
     });
 });
 </script>
