@@ -4,13 +4,14 @@
 
 {% block content %}
 <div class="container mt-4">
+    {% if is_super_admin %}
+    <!-- Super Admin: System Control Panel -->
     <h1 class="mb-4">System Control Panel</h1>
     <p class="lead">Welcome back, {{ session['username'] }}. You have full control over the StockFlow platform.</p>
 
-    {% if is_super_admin %}
     <div class="row mb-5">
         <div class="col-md-6">
-            <div class="card shadow border-primary">
+            <div class="card shadow border-primary h-100 py-2">
                 <div class="card-body text-center">
                     <h2 class="text-primary">{{ total_businesses }}</h2>
                     <p class="mb-0">Active Businesses</p>
@@ -18,7 +19,7 @@
             </div>
         </div>
         <div class="col-md-6">
-            <div class="card shadow border-success">
+            <div class="card shadow border-success h-100 py-2">
                 <div class="card-body text-center">
                     <h2 class="text-success">{{ total_users }}</h2>
                     <p class="mb-0">Total Users</p>
@@ -43,13 +44,13 @@
             <h3>Active Businesses</h3>
             <div class="list-group">
                 {% for biz in businesses %}
-                <a href="#" class="list-group-item list-group-item-action">
+                <div class="list-group-item">
                     <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1">{{ biz.name }}</h5>
+                        <h6 class="mb-1">{{ biz.name }}</h6>
                         <small>{{ biz.created_at.strftime('%b %d') }}</small>
                     </div>
                     <p class="mb-1">{{ biz.location or 'No location' }}</p>
-                </a>
+                </div>
                 {% else %}
                 <div class="alert alert-info">No businesses yet</div>
                 {% endfor %}
@@ -82,8 +83,76 @@
     </div>
 
     {% else %}
-    
-    <p>Your branch dashboard goes here (stock, sales, etc.)</p>
+    <!-- Branch Admin / Cashier: Operational Dashboard -->
+    <h1 class="mb-4">Welcome back, {{ session['username'] }}!</h1>
+    <p class="lead">Here's your {{ business_name }} overview</p>
+
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card bg-primary text-white shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1">Total Products</div>
+                            <div class="h5 mb-0 font-weight-bold">{{ total_products }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-box fa-2x text-white opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card bg-warning text-white shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1">Low Stock Items</div>
+                            <div class="h5 mb-0 font-weight-bold">{{ low_stock_count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-white opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card bg-success text-white shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1">Current Stock Value</div>
+                            <div class="h5 mb-0 font-weight-bold">KSh {{ "%.2f"|format(total_stock_value) }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-white opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card bg-info text-white shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1">Potential Sales Value</div>
+                            <div class="h5 mb-0 font-weight-bold">KSh {{ "%.2f"|format(potential_sales_value) }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-white opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {% endif %}
 </div>
 {% endblock %}
