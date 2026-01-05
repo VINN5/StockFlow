@@ -40,7 +40,7 @@ def checkout():
     items = data['items']
     total_amount = sum(item['quantity'] * item['selling_price'] for item in items)
     payment_method = data.get('payment_method', 'cash')
-    client_id = data.get('client_id')
+    client_id_str = data.get('client_id')  # Keep as string from frontend
     
     # Validate and deduct stock
     for item in items:
@@ -54,7 +54,7 @@ def checkout():
             name = product['name'] if product else 'Unknown'
             return jsonify({'success': False, 'message': f'Not enough stock for {name}'}), 400
     
-    # Create sale document
+    # Create sale
     sale = {
         "items": items,
         "total_amount": total_amount,
@@ -64,9 +64,14 @@ def checkout():
         "cashier_name": session['username']
     }
     
-    if client_id:
-        sale['client_id'] = ObjectId(client_id)
+    # Add client_id as ObjectId if provided
+    if client_id_str:
+        try:
+            sale['client_id'] = ObjectId(client_id_str)
+        except:
+            pass  # invalid, ignore
     
+    # Add business_id
     if session.get('role') != 'super_admin':
         business_id = session.get('business_id')
         if business_id:
@@ -79,13 +84,15 @@ def checkout():
     sale_id = str(result.inserted_id)
     
     # Update client balance on credit sale
-    if payment_method == 'credit' and client_id:
-        current_app.db.clients.update_one(
-            {"_id": ObjectId(client_id)},
-            {"$inc": {"balance": total_amount}}
-        )
+    if payment_method == 'credit' and client_id_str:
+        try:
+            current_app.db.clients.update_one(
+                {"_id": ObjectId(client_id_str)},
+                {"$inc": {"balance": total_amount}}
+            )
+        except:
+            pass  # invalid client, ignore but sale already recorded
     
-    # Use _external=True to get full absolute URL (critical for redirect from JS)
     receipt_url = url_for('pos.receipt', sale_id=sale_id, _external=True)
     
     return jsonify({
