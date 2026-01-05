@@ -145,7 +145,7 @@ def receipt(sale_id):
                 previous_balance = client.get('balance', 0.0) - sale.get('total_amount', 0.0)
                 new_balance = client.get('balance', 0.0)
     
-    # Enrich items
+    # Enrich items safely
     for item in sale['items']:
         product = current_app.db.products.find_one({"_id": ObjectId(item['product_id'])})
         item['product_name'] = product['name'] if product else 'Unknown'
