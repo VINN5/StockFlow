@@ -138,7 +138,7 @@ document.getElementById('cartItems').addEventListener('click', function(e) {
     }
 });
 
-// Enable/disable credit option based on client selection
+// Enable/disable credit option
 document.getElementById('clientSelect').addEventListener('change', function() {
     const paymentMethod = document.getElementById('paymentMethod');
     if (this.value === '') {
@@ -149,7 +149,7 @@ document.getElementById('clientSelect').addEventListener('change', function() {
     }
 });
 
-// Checkout handler
+// Checkout handler - fixed redirect
 document.getElementById('checkoutBtn').addEventListener('click', function() {
     if (cart.length === 0) {
         alert('Cart is empty');
@@ -159,7 +159,6 @@ document.getElementById('checkoutBtn').addEventListener('click', function() {
     const clientId = document.getElementById('clientSelect').value || null;
     const paymentMethod = document.getElementById('paymentMethod').value;
 
-    // Prevent credit sale without client
     if (paymentMethod === 'credit' && !clientId) {
         alert('Please select a client for credit sale');
         return;
@@ -186,13 +185,13 @@ document.getElementById('checkoutBtn').addEventListener('click', function() {
             alert('Sale completed!');
             cart = [];
             updateCart();
-            window.location.href = data.redirect;  // Redirects to receipt
+            window.location.href = data.redirect;  // This will now work reliably
         } else {
             alert(data.message || 'Sale failed');
         }
     })
     .catch(err => {
-        alert('Error processing sale');
+        alert('Network error. Please try again.');
         console.error(err);
     });
 });

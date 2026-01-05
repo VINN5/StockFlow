@@ -22,12 +22,10 @@ def index():
     
     query = get_business_query()
     
-   
     products = list(current_app.db.products.find({
         **query,
         "current_quantity": {"$gt": 0}
     }).sort("name", 1))
-    
     
     clients = list(current_app.db.clients.find(query).sort("name", 1))
     
@@ -41,10 +39,10 @@ def checkout():
     data = request.get_json()
     items = data['items']
     total_amount = sum(item['quantity'] * item['selling_price'] for item in items)
-    payment_method = data.get('payment_method', 'cash')  # 'cash' or 'credit'
-    client_id = data.get('client_id')  
+    payment_method = data.get('payment_method', 'cash')
+    client_id = data.get('client_id')
     
-    
+    # Validate and deduct stock
     for item in items:
         product_id = ObjectId(item['product_id'])
         result = current_app.db.products.update_one(
@@ -56,7 +54,7 @@ def checkout():
             name = product['name'] if product else 'Unknown'
             return jsonify({'success': False, 'message': f'Not enough stock for {name}'}), 400
     
-    
+    # Create sale document
     sale = {
         "items": items,
         "total_amount": total_amount,
@@ -66,10 +64,8 @@ def checkout():
         "cashier_name": session['username']
     }
     
-   
     if client_id:
         sale['client_id'] = ObjectId(client_id)
-    
     
     if session.get('role') != 'super_admin':
         business_id = session.get('business_id')
@@ -82,14 +78,16 @@ def checkout():
     result = current_app.db.sales.insert_one(sale)
     sale_id = str(result.inserted_id)
     
-    
+    # Update client balance on credit sale
     if payment_method == 'credit' and client_id:
         current_app.db.clients.update_one(
             {"_id": ObjectId(client_id)},
             {"$inc": {"balance": total_amount}}
         )
     
-    receipt_url = url_for('pos.receipt', sale_id=sale_id)
+    # Use _external=True to get full absolute URL (critical for redirect from JS)
+    receipt_url = url_for('pos.receipt', sale_id=sale_id, _external=True)
+    
     return jsonify({
         'success': True,
         'message': 'Sale completed!',
@@ -122,21 +120,18 @@ def receipt(sale_id):
         flash('Sale not found or access denied', 'danger')
         return redirect(url_for('pos.index'))
     
-    # Default values
     client_name = None
     client_contact = None
     client_kra_pin = None
     previous_balance = 0.0
     new_balance = 0.0
     
-    # Load client details and balance if linked
     if sale.get('client_id'):
         client = current_app.db.clients.find_one({"_id": sale['client_id']})
         if client:
             client_name = client.get('name', 'Unknown Client')
             client_contact = client.get('contact')
             client_kra_pin = client.get('kra_pin')
-            # Previous balance = current balance - sale amount (if credit sale)
             if sale.get('payment_method') == 'credit':
                 previous_balance = client.get('balance', 0.0) - sale.get('total_amount', 0.0)
                 new_balance = client.get('balance', 0.0)
@@ -144,7 +139,6 @@ def receipt(sale_id):
                 previous_balance = client.get('balance', 0.0)
                 new_balance = previous_balance
     
-    # Enrich items with product names
     for item in sale['items']:
         product = current_app.db.products.find_one({"_id": ObjectId(item['product_id'])})
         item['product_name'] = product['name'] if product else 'Unknown'
