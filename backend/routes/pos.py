@@ -122,16 +122,38 @@ def receipt(sale_id):
         flash('Sale not found or access denied', 'danger')
         return redirect(url_for('pos.index'))
     
-    
+    # Default values
     client_name = None
+    client_contact = None
+    client_kra_pin = None
+    previous_balance = 0.0
+    new_balance = 0.0
+    
+    # Load client details and balance if linked
     if sale.get('client_id'):
         client = current_app.db.clients.find_one({"_id": sale['client_id']})
-        client_name = client['name'] if client else 'Unknown Client'
+        if client:
+            client_name = client.get('name', 'Unknown Client')
+            client_contact = client.get('contact')
+            client_kra_pin = client.get('kra_pin')
+            # Previous balance = current balance - sale amount (if credit sale)
+            if sale.get('payment_method') == 'credit':
+                previous_balance = client.get('balance', 0.0) - sale.get('total_amount', 0.0)
+                new_balance = client.get('balance', 0.0)
+            else:
+                previous_balance = client.get('balance', 0.0)
+                new_balance = previous_balance
     
-    
+    # Enrich items with product names
     for item in sale['items']:
         product = current_app.db.products.find_one({"_id": ObjectId(item['product_id'])})
         item['product_name'] = product['name'] if product else 'Unknown'
         item['line_total'] = item['quantity'] * item['selling_price']
     
-    return render_template('pos_receipt.html', sale=sale, client_name=client_name)
+    return render_template('pos_receipt.html', 
+                           sale=sale, 
+                           client_name=client_name,
+                           client_contact=client_contact,
+                           client_kra_pin=client_kra_pin,
+                           previous_balance=previous_balance,
+                           new_balance=new_balance)
