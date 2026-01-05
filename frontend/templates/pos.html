@@ -138,7 +138,7 @@ document.getElementById('cartItems').addEventListener('click', function(e) {
     }
 });
 
-
+// Enable/disable credit option based on client selection
 document.getElementById('clientSelect').addEventListener('change', function() {
     const paymentMethod = document.getElementById('paymentMethod');
     if (this.value === '') {
@@ -149,13 +149,17 @@ document.getElementById('clientSelect').addEventListener('change', function() {
     }
 });
 
+// Checkout handler
 document.getElementById('checkoutBtn').addEventListener('click', function() {
-    if (cart.length === 0) return;
+    if (cart.length === 0) {
+        alert('Cart is empty');
+        return;
+    }
 
     const clientId = document.getElementById('clientSelect').value || null;
     const paymentMethod = document.getElementById('paymentMethod').value;
 
-    // If credit selected but no client, warn
+    // Prevent credit sale without client
     if (paymentMethod === 'credit' && !clientId) {
         alert('Please select a client for credit sale');
         return;
@@ -182,7 +186,7 @@ document.getElementById('checkoutBtn').addEventListener('click', function() {
             alert('Sale completed!');
             cart = [];
             updateCart();
-            window.location.href = data.redirect;
+            window.location.href = data.redirect;  // Redirects to receipt
         } else {
             alert(data.message || 'Sale failed');
         }
