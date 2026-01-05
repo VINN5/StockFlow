@@ -127,12 +127,14 @@ def receipt(sale_id):
         flash('Sale not found or access denied', 'danger')
         return redirect(url_for('pos.index'))
     
-    client_name = None
+    # Safe defaults
+    client_name = 'Cash Sale'
     client_contact = None
     client_kra_pin = None
-    previous_balance = 0.0
-    new_balance = 0.0
+    previous_balance = None
+    new_balance = None
     
+    # Safely load client if linked
     if sale.get('client_id'):
         client = current_app.db.clients.find_one({"_id": sale['client_id']})
         if client:
@@ -142,10 +144,8 @@ def receipt(sale_id):
             if sale.get('payment_method') == 'credit':
                 previous_balance = client.get('balance', 0.0) - sale.get('total_amount', 0.0)
                 new_balance = client.get('balance', 0.0)
-            else:
-                previous_balance = client.get('balance', 0.0)
-                new_balance = previous_balance
     
+    # Enrich items
     for item in sale['items']:
         product = current_app.db.products.find_one({"_id": ObjectId(item['product_id'])})
         item['product_name'] = product['name'] if product else 'Unknown'
