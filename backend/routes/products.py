@@ -106,10 +106,13 @@ def edit(product_id):
             }
             current_app.db.products.update_one({"_id": obj_id}, {"$set": updated})
             flash('Product updated successfully!', 'success')
-        except ValueError:
-            flash('Invalid input - check numbers', 'danger')
+        except ValueError as e:
+            flash(f'Invalid number format: {str(e)}', 'danger')
+        except Exception as e:
+            flash('Update failed', 'danger')
         
         return redirect(url_for('products.index'))
+    
     
     return render_template('product_edit.html', product=product)
 
