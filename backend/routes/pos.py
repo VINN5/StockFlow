@@ -52,9 +52,10 @@ def checkout():
         except:
             return jsonify({'success': False, 'message': 'Invalid product ID'}), 400
         
+        quantity = item.get('quantity', 0)
         result = current_app.db.products.update_one(
-            {"_id": product_id, "current_quantity": {"$gte": item.get('quantity', 0)}},
-            {"$inc": {"current_quantity": -item.get('quantity', 0)}}
+            {"_id": product_id, "current_quantity": {"$gte": quantity}},
+            {"$inc": {"current_quantity": -quantity}}
         )
         if result.modified_count == 0:
             product = current_app.db.products.find_one({"_id": product_id})
@@ -155,22 +156,26 @@ def receipt(sale_id):
             previous_balance = current_balance - sale.get('total_amount', 0.0)
             new_balance = current_balance
     
-    # Safe item enrichment
+    # Safe item enrichment - this is the key fix
     enriched_items = []
     for item in sale.get('items', []):
-        enriched = {
-            'product_name': 'Unknown Product',
-            'quantity': item.get('quantity', 0),
-            'selling_price': item.get('selling_price', 0.0),
-            'line_total': item.get('quantity', 0) * item.get('selling_price', 0.0)
-        }
+        quantity = item.get('quantity', 0)
+        price = item.get('selling_price', 0.0)
+        line_total = quantity * price
+        product_name = 'Unknown Product'
         try:
-            product = current_app.db.products.find_one(ObjectId(item['product_id']))
+            product = current_app.db.products.find_one(ObjectId(item.get('product_id')))
             if product:
-                enriched['product_name'] = product.get('name', 'Unknown Product')
+                product_name = product.get('name', 'Unknown Product')
         except Exception as e:
             current_app.logger.error(f"Product load error: {e}")
-        enriched_items.append(enriched)
+        
+        enriched_items.append({
+            'product_name': product_name,
+            'quantity': quantity,
+            'selling_price': price,
+            'line_total': line_total
+        })
     
     sale['items'] = enriched_items
     
