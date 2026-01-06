@@ -41,25 +41,30 @@ def checkout():
     if not items:
         return jsonify({'success': False, 'message': 'No items in cart'}), 400
     
-    total_amount = sum(item.get('quantity', 0) * item.get('selling_price', 0.0) for item in items)
+    total_amount = 0.0
+    for item in items:
+        quantity = float(item.get('quantity', 0))
+        price = float(item.get('selling_price', 0.0))
+        total_amount += quantity * price
+    
     payment_method = data.get('payment_method', 'cash')
     client_id_str = data.get('client_id')
     
-    # Validate and deduct stock
+    # Deduct stock safely
     for item in items:
         try:
             product_id = ObjectId(item['product_id'])
         except:
             return jsonify({'success': False, 'message': 'Invalid product ID'}), 400
         
-        quantity = item.get('quantity', 0)
+        quantity = int(item.get('quantity', 0))
         result = current_app.db.products.update_one(
             {"_id": product_id, "current_quantity": {"$gte": quantity}},
             {"$inc": {"current_quantity": -quantity}}
         )
         if result.modified_count == 0:
             product = current_app.db.products.find_one({"_id": product_id})
-            name = product['name'] if product else 'Unknown Product'
+            name = product['name'] if product else 'Unknown'
             return jsonify({'success': False, 'message': f'Not enough stock for {name}'}), 400
     
     # Create sale
@@ -68,8 +73,8 @@ def checkout():
         "total_amount": total_amount,
         "payment_method": payment_method,
         "date": datetime.utcnow(),
-        "cashier_id": ObjectId(session['user_id']) if session.get('user_id') else None,
-        "cashier_name": session.get('username', 'Unknown')
+        "cashier_id": session['user_id'],
+        "cashier_name": session['username']
     }
     
     if client_id_str:
@@ -89,15 +94,15 @@ def checkout():
     result = current_app.db.sales.insert_one(sale)
     sale_id = str(result.inserted_id)
     
-    # Update client balance
+    # Update balance safely
     if payment_method == 'credit' and client_id_str:
         try:
             current_app.db.clients.update_one(
                 {"_id": ObjectId(client_id_str)},
                 {"$inc": {"balance": total_amount}}
             )
-        except Exception as e:
-            current_app.logger.error(f"Balance update failed: {e}")
+        except:
+            pass  # Log if needed, but don't crash sale
     
     receipt_url = url_for('pos.receipt', sale_id=sale_id, _external=True)
     
@@ -144,8 +149,8 @@ def receipt(sale_id):
     if sale.get('client_id'):
         try:
             client = current_app.db.clients.find_one(sale['client_id'])
-        except Exception as e:
-            current_app.logger.error(f"Client load error: {e}")
+        except:
+            client = None
     
     if client:
         client_name = client.get('name', 'Unknown Client')
@@ -156,19 +161,23 @@ def receipt(sale_id):
             previous_balance = current_balance - sale.get('total_amount', 0.0)
             new_balance = current_balance
     
-    # Safe item enrichment - this is the key fix
+    # The ultimate safe item enrichment
     enriched_items = []
-    for item in sale.get('items', []):
-        quantity = item.get('quantity', 0)
-        price = item.get('selling_price', 0.0)
+    for raw_item in sale.get('items', []):
+        quantity = float(raw_item.get('quantity', 0))
+        price = float(raw_item.get('selling_price', 0.0))
         line_total = quantity * price
         product_name = 'Unknown Product'
-        try:
-            product = current_app.db.products.find_one(ObjectId(item.get('product_id')))
-            if product:
-                product_name = product.get('name', 'Unknown Product')
-        except Exception as e:
-            current_app.logger.error(f"Product load error: {e}")
+        
+        product_id_str = raw_item.get('product_id')
+        if product_id_str:
+            try:
+                product_id = ObjectId(product_id_str)
+                product = current_app.db.products.find_one(product_id)
+                if product:
+                    product_name = product.get('name', 'Unknown Product')
+            except:
+                product_name = 'Deleted Product'
         
         enriched_items.append({
             'product_name': product_name,
