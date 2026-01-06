@@ -134,31 +134,30 @@ def receipt(sale_id):
     previous_balance = None
     new_balance = None
     
-    # Safely load client if linked
+    # Safely load client
     client = None
     if sale.get('client_id'):
-        try:
-            client = current_app.db.clients.find_one({"_id": sale['client_id']})
-        except:
-            client = None
+        client = current_app.db.clients.find_one({"_id": sale['client_id']})
     
     if client:
         client_name = client.get('name', 'Unknown Client')
         client_contact = client.get('contact')
         client_kra_pin = client.get('kra_pin')
+        current_balance = client.get('balance', 0.0)
         if sale.get('payment_method') == 'credit':
-            current_balance = client.get('balance', 0.0)
             previous_balance = current_balance - sale.get('total_amount', 0.0)
+            new_balance = current_balance
+        else:
+            previous_balance = current_balance
             new_balance = current_balance
     
     # Enrich items safely
     for item in sale['items']:
-        try:
-            product = current_app.db.products.find_one({"_id": ObjectId(item['product_id'])})
-            item['product_name'] = product['name'] if product else 'Unknown'
-        except:
-            item['product_name'] = 'Unknown'
+        item['product_name'] = 'Unknown'
         item['line_total'] = item['quantity'] * item['selling_price']
+        product = current_app.db.products.find_one({"_id": ObjectId(item['product_id'])})
+        if product:
+            item['product_name'] = product['name']
     
     return render_template('pos_receipt.html', 
                            sale=sale, 

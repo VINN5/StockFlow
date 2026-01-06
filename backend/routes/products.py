@@ -102,12 +102,12 @@ def edit(product_id):
                 "selling_price": float(request.form['selling_price']),
                 "min_stock": int(request.form['min_stock']),
                 "max_stock": int(request.form.get('max_stock')) if request.form.get('max_stock') else None,
-                "current_quantity": int(request.form.get('current_quantity', product['current_quantity']))
+                "current_quantity": int(request.form.get('current_quantity', product.get('current_quantity', 0)))
             }
             current_app.db.products.update_one({"_id": obj_id}, {"$set": updated})
             flash('Product updated successfully!', 'success')
         except ValueError:
-            flash('Invalid input', 'danger')
+            flash('Invalid input - check numbers', 'danger')
         
         return redirect(url_for('products.index'))
     
