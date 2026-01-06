@@ -19,7 +19,11 @@
                             Stock: <strong>{{ product.current_quantity }}</strong><br>
                             Price: <strong>KSh {{ "%.2f"|format(product.selling_price) }}</strong>
                         </p>
-                        <button class="btn btn-primary add-to-cart" data-id="{{ product._id }}" data-name="{{ product.name }}" data-price="{{ product.selling_price }}">
+                        <button class="btn btn-primary add-to-cart" 
+                                data-id="{{ product._id }}" 
+                                data-name="{{ product.name }}" 
+                                data-price="{{ product.selling_price }}"
+                                {% if product.current_quantity <= 0 %}disabled{% endif %}>
                             <i class="fas fa-cart-plus"></i> Add to Cart
                         </button>
                     </div>
@@ -77,15 +81,17 @@
 let cart = [];
 
 function searchProducts() {
-    let input = document.getElementById('searchInput').value.toLowerCase();
+    const input = document.getElementById('searchInput').value.toLowerCase();
     document.querySelectorAll('.product-card').forEach(card => {
-        let name = card.dataset.name;
+        const name = card.dataset.name;
         card.style.display = name.includes(input) ? '' : 'none';
     });
 }
 
 document.querySelectorAll('.add-to-cart').forEach(btn => {
     btn.addEventListener('click', function() {
+        if (this.disabled) return;
+        
         const id = this.dataset.id;
         const name = this.dataset.name;
         const price = parseFloat(this.dataset.price);
@@ -110,16 +116,16 @@ function updateCart() {
         total += lineTotal;
 
         const div = document.createElement('div');
-        div.className = 'd-flex justify-content-between mb-2';
+        div.className = 'd-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded';
         div.innerHTML = `
-            <div>
+            <div class="flex-grow-1">
                 <strong>${item.name}</strong><br>
-                <small>${item.quantity} × KSh ${item.price.toFixed(2)}</small>
+                <small class="text-muted">${item.quantity} × KSh ${item.price.toFixed(2)}</small>
             </div>
-            <div>
-                <strong>KSh ${lineTotal.toFixed(2)}</strong>
-                <button class="btn btn-sm btn-danger ms-2 remove-item" data-index="${index}">
-                    <i class="fas fa-trash"></i>
+            <div class="text-end">
+                <strong>KSh ${lineTotal.toFixed(2)}</strong><br>
+                <button class="btn btn-sm btn-danger mt-1 remove-item" data-index="${index}">
+                    <i class="fas fa-trash"></i> Remove
                 </button>
             </div>
         `;
@@ -130,15 +136,17 @@ function updateCart() {
     document.getElementById('checkoutBtn').disabled = cart.length === 0;
 }
 
+// Remove item from cart
 document.getElementById('cartItems').addEventListener('click', function(e) {
-    if (e.target.closest('.remove-item')) {
-        const index = e.target.closest('.remove-item').dataset.index;
+    const btn = e.target.closest('.remove-item');
+    if (btn) {
+        const index = parseInt(btn.dataset.index);
         cart.splice(index, 1);
         updateCart();
     }
 });
 
-// Enable/disable credit option
+// Control credit option based on client selection
 document.getElementById('clientSelect').addEventListener('change', function() {
     const paymentMethod = document.getElementById('paymentMethod');
     if (this.value === '') {
@@ -149,7 +157,10 @@ document.getElementById('clientSelect').addEventListener('change', function() {
     }
 });
 
-// Checkout handler - fixed redirect
+// Initial state
+document.getElementById('paymentMethod').disabled = !document.getElementById('clientSelect').value;
+
+// Checkout
 document.getElementById('checkoutBtn').addEventListener('click', function() {
     if (cart.length === 0) {
         alert('Cart is empty');
@@ -170,6 +181,9 @@ document.getElementById('checkoutBtn').addEventListener('click', function() {
         selling_price: item.price
     }));
 
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+
     fetch('/pos/checkout', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -182,17 +196,22 @@ document.getElementById('checkoutBtn').addEventListener('click', function() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Sale completed!');
+            alert('Sale completed successfully!');
             cart = [];
             updateCart();
-            window.location.href = data.redirect;  // This will now work reliably
+            window.location.href = data.redirect;
         } else {
-            alert(data.message || 'Sale failed');
+            alert(data.message || 'Sale failed. Please try again.');
         }
     })
     .catch(err => {
-        alert('Network error. Please try again.');
         console.error(err);
+        alert('Network error. Please try again.');
+    })
+    .finally(() => {
+        const btn = document.getElementById('checkoutBtn');
+        btn.disabled = cart.length === 0;
+        btn.innerHTML = '<i class="fas fa-cash-register me-2"></i>Checkout';
     });
 });
 </script>
