@@ -37,21 +37,28 @@ def checkout():
         return jsonify({'success': False, 'message': 'Login required'}), 401
     
     data = request.get_json()
-    items = data['items']
-    total_amount = sum(item['quantity'] * item['selling_price'] for item in items)
+    items = data.get('items', [])
+    if not items:
+        return jsonify({'success': False, 'message': 'No items in cart'}), 400
+    
+    total_amount = sum(item.get('quantity', 0) * item.get('selling_price', 0.0) for item in items)
     payment_method = data.get('payment_method', 'cash')
-    client_id_str = data.get('client_id')  # Keep as string from frontend
+    client_id_str = data.get('client_id')
     
     # Validate and deduct stock
     for item in items:
-        product_id = ObjectId(item['product_id'])
+        try:
+            product_id = ObjectId(item['product_id'])
+        except:
+            return jsonify({'success': False, 'message': 'Invalid product ID'}), 400
+        
         result = current_app.db.products.update_one(
-            {"_id": product_id, "current_quantity": {"$gte": item['quantity']}},
-            {"$inc": {"current_quantity": -item['quantity']}}
+            {"_id": product_id, "current_quantity": {"$gte": item.get('quantity', 0)}},
+            {"$inc": {"current_quantity": -item.get('quantity', 0)}}
         )
         if result.modified_count == 0:
             product = current_app.db.products.find_one({"_id": product_id})
-            name = product['name'] if product else 'Unknown'
+            name = product['name'] if product else 'Unknown Product'
             return jsonify({'success': False, 'message': f'Not enough stock for {name}'}), 400
     
     # Create sale
@@ -60,18 +67,16 @@ def checkout():
         "total_amount": total_amount,
         "payment_method": payment_method,
         "date": datetime.utcnow(),
-        "cashier_id": session['user_id'],
-        "cashier_name": session['username']
+        "cashier_id": ObjectId(session['user_id']) if session.get('user_id') else None,
+        "cashier_name": session.get('username', 'Unknown')
     }
     
-    # Add client_id as ObjectId if provided
     if client_id_str:
         try:
             sale['client_id'] = ObjectId(client_id_str)
         except:
-            pass  # invalid, ignore
+            pass
     
-    # Add business_id
     if session.get('role') != 'super_admin':
         business_id = session.get('business_id')
         if business_id:
@@ -83,15 +88,15 @@ def checkout():
     result = current_app.db.sales.insert_one(sale)
     sale_id = str(result.inserted_id)
     
-    # Update client balance on credit sale
+    # Update client balance
     if payment_method == 'credit' and client_id_str:
         try:
             current_app.db.clients.update_one(
                 {"_id": ObjectId(client_id_str)},
                 {"$inc": {"balance": total_amount}}
             )
-        except:
-            pass  
+        except Exception as e:
+            current_app.logger.error(f"Balance update failed: {e}")
     
     receipt_url = url_for('pos.receipt', sale_id=sale_id, _external=True)
     
@@ -127,20 +132,19 @@ def receipt(sale_id):
         flash('Sale not found or access denied', 'danger')
         return redirect(url_for('pos.index'))
     
-    
+    # Safe defaults
     client_name = 'Cash Sale'
     client_contact = None
     client_kra_pin = None
     previous_balance = None
     new_balance = None
     
-   
     client = None
     if sale.get('client_id'):
         try:
-            client = current_app.db.clients.find_one({"_id": sale['client_id']})
-        except:
-            client = None  
+            client = current_app.db.clients.find_one(sale['client_id'])
+        except Exception as e:
+            current_app.logger.error(f"Client load error: {e}")
     
     if client:
         client_name = client.get('name', 'Unknown Client')
@@ -151,7 +155,7 @@ def receipt(sale_id):
             previous_balance = current_balance - sale.get('total_amount', 0.0)
             new_balance = current_balance
     
-    
+    # Safe item enrichment
     enriched_items = []
     for item in sale.get('items', []):
         enriched = {
@@ -161,17 +165,17 @@ def receipt(sale_id):
             'line_total': item.get('quantity', 0) * item.get('selling_price', 0.0)
         }
         try:
-            product = current_app.db.products.find_one({"_id": ObjectId(item['product_id'])})
+            product = current_app.db.products.find_one(ObjectId(item['product_id']))
             if product:
                 enriched['product_name'] = product.get('name', 'Unknown Product')
-        except:
-            pass
+        except Exception as e:
+            current_app.logger.error(f"Product load error: {e}")
         enriched_items.append(enriched)
     
-    sale['items'] = enriched_items  
+    sale['items'] = enriched_items
     
-    return render_template('pos_receipt.html', 
-                           sale=sale, 
+    return render_template('pos_receipt.html',
+                           sale=sale,
                            client_name=client_name,
                            client_contact=client_contact,
                            client_kra_pin=client_kra_pin,
