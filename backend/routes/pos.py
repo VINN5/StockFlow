@@ -127,17 +127,20 @@ def receipt(sale_id):
         flash('Sale not found or access denied', 'danger')
         return redirect(url_for('pos.index'))
     
-    # Safe defaults
+    
     client_name = 'Cash Sale'
     client_contact = None
     client_kra_pin = None
     previous_balance = None
     new_balance = None
     
-    # Safely load client
+   
     client = None
     if sale.get('client_id'):
-        client = current_app.db.clients.find_one({"_id": sale['client_id']})
+        try:
+            client = current_app.db.clients.find_one({"_id": sale['client_id']})
+        except:
+            client = None  
     
     if client:
         client_name = client.get('name', 'Unknown Client')
@@ -147,17 +150,25 @@ def receipt(sale_id):
         if sale.get('payment_method') == 'credit':
             previous_balance = current_balance - sale.get('total_amount', 0.0)
             new_balance = current_balance
-        else:
-            previous_balance = current_balance
-            new_balance = current_balance
     
-    # Enrich items safely
-    for item in sale['items']:
-        item['product_name'] = 'Unknown'
-        item['line_total'] = item['quantity'] * item['selling_price']
-        product = current_app.db.products.find_one({"_id": ObjectId(item['product_id'])})
-        if product:
-            item['product_name'] = product['name']
+    
+    enriched_items = []
+    for item in sale.get('items', []):
+        enriched = {
+            'product_name': 'Unknown Product',
+            'quantity': item.get('quantity', 0),
+            'selling_price': item.get('selling_price', 0.0),
+            'line_total': item.get('quantity', 0) * item.get('selling_price', 0.0)
+        }
+        try:
+            product = current_app.db.products.find_one({"_id": ObjectId(item['product_id'])})
+            if product:
+                enriched['product_name'] = product.get('name', 'Unknown Product')
+        except:
+            pass
+        enriched_items.append(enriched)
+    
+    sale['items'] = enriched_items  
     
     return render_template('pos_receipt.html', 
                            sale=sale, 
