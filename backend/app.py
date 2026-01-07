@@ -135,8 +135,8 @@ def dashboard():
                 biz = db.businesses.find_one({"_id": user['business_id']}, {"name": 1})
                 business_name = biz.get('name', 'Unknown') if biz else "Deleted"
             users_with_business.append({
-                "username": user['username'],
-                "role": user['role'],
+                "username": user.get('username', 'Unknown'),
+                "role": user.get('role', 'Unknown'),
                 "business": business_name,
                 "created": user.get('created_at', datetime.utcnow()).strftime('%b %d, %Y')
             })
@@ -158,8 +158,6 @@ def dashboard():
         products = list(db.products.find(query))
         
         total_products = len(products)
-        total_stock_value = sum(p.get('current_quantity', 0) * p.get('purchase_price', 0) for p in products)
-        potential_sales_value = sum(p.get('current_quantity', 0) * p.get('selling_price', 0) for p in products)
         low_stock_count = len([p for p in products if p.get('current_quantity', 0) < p.get('min_stock', 10)])
         
         # Today's sales total
@@ -170,14 +168,23 @@ def dashboard():
         }))
         today_sales_total = sum(s.get('total_amount', 0.0) for s in today_sales)
         
+        # Financial stats only for branch admin
+        is_branch_admin = user_role == 'admin'
+        current_stock_value = 0.0
+        potential_sales_value = 0.0
+        if is_branch_admin:
+            current_stock_value = sum(p.get('current_quantity', 0) * p.get('purchase_price', 0) for p in products)
+            potential_sales_value = sum(p.get('current_quantity', 0) * p.get('selling_price', 0) for p in products)
+        
         return render_template('dashboard.html',
                                is_super_admin=False,
+                               is_branch_admin=is_branch_admin,
                                total_products=total_products,
-                               total_stock_value=total_stock_value,
-                               potential_sales_value=potential_sales_value,
                                low_stock_count=low_stock_count,
                                today_sales_total=today_sales_total,
-                               business_name=session.get('business_name', 'StockFlow'))
+                               current_stock_value=current_stock_value,
+                               potential_sales_value=potential_sales_value,
+                               business_name=session.get('business_name', 'Your Branch'))
         
         
 @app.route('/users')

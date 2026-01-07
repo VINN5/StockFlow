@@ -87,7 +87,6 @@
     <h1 class="mb-4">Welcome back, {{ session.username }}!</h1>
     <p class="lead">Here's your {{ business_name }} overview</p>
 
-    <!-- Common Stats for Both Roles -->
     <div class="row g-4 mb-5 text-center">
         <div class="col-md-4">
             <div class="card text-white bg-primary shadow-lg border-0">
@@ -120,8 +119,8 @@
         </div>
     </div>
 
-    <!-- Branch Admin Only: Financial Stats -->
     {% if is_branch_admin %}
+    <!-- Branch Admin Only: Financial Stats -->
     <div class="row g-4 mb-5 text-center">
         <div class="col-md-6">
             <div class="card text-white bg-info shadow-lg border-0">
