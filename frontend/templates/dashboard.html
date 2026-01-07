@@ -141,6 +141,37 @@
             </div>
         </div>
     </div>
+
+    <!-- Branch Admin Only: Today's Sales Details Table -->
+    <h3 class="mt-5">Today's Sales Details</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Client</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Payment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in today_sales %}
+                <tr>
+                    <td>{{ sale.date.strftime('%H:%M') }}</td>
+                    <td>{{ sale.client_name }}</td>
+                    <td>{{ sale.items_count }}</td>
+                    <td>KSh {{ "%.2f"|format(sale.total_amount) }}</td>
+                    <td>{{ sale.payment_method|capitalize }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center">No sales today yet</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% endif %}
 
     <div class="text-center py-5 bg-light rounded-3 shadow-sm">

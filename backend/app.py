@@ -165,8 +165,18 @@ def dashboard():
         today_sales = list(db.sales.find({
             "date": {"$gte": today_start},
             **query
-        }))
+        }).sort("date", -1))
+        
         today_sales_total = sum(s.get('total_amount', 0.0) for s in today_sales)
+        
+        # Enrich today's sales with client name for admin list
+        for sale in today_sales:
+            sale['client_name'] = 'Cash Sale'
+            if sale.get('client_id'):
+                client = db.clients.find_one({"_id": sale['client_id']})
+                if client:
+                    sale['client_name'] = client.get('name', 'Unknown Client')
+            sale['items_count'] = len(sale.get('items', []))
         
         # Financial stats only for branch admin
         is_branch_admin = user_role == 'admin'
@@ -182,6 +192,7 @@ def dashboard():
                                total_products=total_products,
                                low_stock_count=low_stock_count,
                                today_sales_total=today_sales_total,
+                               today_sales=today_sales,  
                                current_stock_value=current_stock_value,
                                potential_sales_value=potential_sales_value,
                                business_name=session.get('business_name', 'Your Branch'))
