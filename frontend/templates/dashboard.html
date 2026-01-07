@@ -7,7 +7,7 @@
     {% if is_super_admin %}
     <!-- Super Admin: System Control Panel -->
     <h1 class="mb-4">System Control Panel</h1>
-    <p class="lead">Welcome back, {{ session['username'] }}. You have full control over the StockFlow platform.</p>
+    <p class="lead">Welcome back, {{ session.username }}. You have full control over the StockFlow platform.</p>
 
     <div class="row mb-5">
         <div class="col-md-6">
@@ -84,75 +84,70 @@
 
     {% else %}
     <!-- Branch Admin / Cashier: Operational Dashboard -->
-    <h1 class="mb-4">Welcome back, {{ session['username'] }}!</h1>
+    <h1 class="mb-4">Welcome back, {{ session.username }}!</h1>
     <p class="lead">Here's your {{ business_name }} overview</p>
 
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card bg-primary text-white shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-uppercase mb-1">Total Products</div>
-                            <div class="h5 mb-0 font-weight-bold">{{ total_products }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-box fa-2x text-white opacity-50"></i>
-                        </div>
-                    </div>
+    <!-- Common Stats for Both Roles -->
+    <div class="row g-4 mb-5 text-center">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary shadow-lg border-0">
+                <div class="card-body py-5">
+                    <i class="fas fa-boxes fa-4x mb-4 opacity-75"></i>
+                    <h2 class="display-5 mb-0">{{ total_products }}</h2>
+                    <p class="lead mb-0">Total Products</p>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card bg-warning text-white shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-uppercase mb-1">Low Stock Items</div>
-                            <div class="h5 mb-0 font-weight-bold">{{ low_stock_count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-exclamation-triangle fa-2x text-white opacity-50"></i>
-                        </div>
-                    </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-warning shadow-lg border-0">
+                <div class="card-body py-5">
+                    <i class="fas fa-exclamation-triangle fa-4x mb-4 opacity-75"></i>
+                    <h2 class="display-5 mb-0">{{ low_stock_count }}</h2>
+                    <p class="lead mb-0">Low Stock Items</p>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card bg-success text-white shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-uppercase mb-1">Current Stock Value</div>
-                            <div class="h5 mb-0 font-weight-bold">KSh {{ "%.2f"|format(total_stock_value) }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-dollar-sign fa-2x text-white opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card bg-info text-white shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-uppercase mb-1">Potential Sales Value</div>
-                            <div class="h5 mb-0 font-weight-bold">KSh {{ "%.2f"|format(potential_sales_value) }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-chart-line fa-2x text-white opacity-50"></i>
-                        </div>
-                    </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success shadow-lg border-0">
+                <div class="card-body py-5">
+                    <i class="fas fa-money-bill-wave fa-4x mb-4 opacity-75"></i>
+                    <h2 class="display-5 mb-0">KSh {{ "%.2f"|format(today_sales_total) }}</h2>
+                    <p class="lead mb-0">Today's Sales</p>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Branch Admin Only: Financial Stats -->
+    {% if is_branch_admin %}
+    <div class="row g-4 mb-5 text-center">
+        <div class="col-md-6">
+            <div class="card text-white bg-info shadow-lg border-0">
+                <div class="card-body py-5">
+                    <i class="fas fa-dollar-sign fa-4x mb-4 opacity-75"></i>
+                    <h2 class="display-5 mb-0">KSh {{ "%.2f"|format(current_stock_value) }}</h2>
+                    <p class="lead mb-0">Current Stock Value</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card text-white bg-purple shadow-lg border-0">
+                <div class="card-body py-5">
+                    <i class="fas fa-chart-line fa-4x mb-4 opacity-75"></i>
+                    <h2 class="display-5 mb-0">KSh {{ "%.2f"|format(potential_sales_value) }}</h2>
+                    <p class="lead mb-0">Potential Sales Value</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="text-center py-5 bg-light rounded-3 shadow-sm">
+        <h2 class="display-6 mb-3">Keep up the great work!</h2>
+        <p class="lead text-muted">You're making a difference at {{ business_name }}</p>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
