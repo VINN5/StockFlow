@@ -113,11 +113,11 @@ def signup():
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-
+    
     user_role = session.get('role')
-
+    
     if user_role == 'super_admin':
-        # Super Admin: System management view
+        # Super Admin: System-wide management view
         total_businesses = db.businesses.count_documents({})
         total_users = db.users.count_documents({})
         
@@ -133,12 +133,12 @@ def dashboard():
             business_name = "—"
             if user.get('business_id'):
                 biz = db.businesses.find_one({"_id": user['business_id']}, {"name": 1})
-                business_name = biz['name'] if biz else "Unknown"
+                business_name = biz.get('name', 'Unknown') if biz else "Deleted"
             users_with_business.append({
                 "username": user['username'],
                 "role": user['role'],
                 "business": business_name,
-                "created": user['created_at'].strftime('%b %d, %Y')
+                "created": user.get('created_at', datetime.utcnow()).strftime('%b %d, %Y')
             })
         
         all_businesses = list(db.businesses.find().sort("created_at", -1))
@@ -150,9 +150,11 @@ def dashboard():
                                users=users_with_business,
                                businesses=all_businesses,
                                business_name="System Control Panel")
+    
     else:
         # Branch Admin / Cashier: Operational view with filtered data
         query = get_business_query()
+        
         products = list(db.products.find(query))
         
         total_products = len(products)
@@ -160,15 +162,24 @@ def dashboard():
         potential_sales_value = sum(p.get('current_quantity', 0) * p.get('selling_price', 0) for p in products)
         low_stock_count = len([p for p in products if p.get('current_quantity', 0) < p.get('min_stock', 10)])
         
+        # Today's sales total
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_sales = list(db.sales.find({
+            "date": {"$gte": today_start},
+            **query
+        }))
+        today_sales_total = sum(s.get('total_amount', 0.0) for s in today_sales)
+        
         return render_template('dashboard.html',
                                is_super_admin=False,
                                total_products=total_products,
                                total_stock_value=total_stock_value,
                                potential_sales_value=potential_sales_value,
                                low_stock_count=low_stock_count,
+                               today_sales_total=today_sales_total,
                                business_name=session.get('business_name', 'StockFlow'))
-
-
+        
+        
 @app.route('/users')
 def users():
     if 'user_id' not in session or session.get('role') not in ['admin', 'super_admin']:
