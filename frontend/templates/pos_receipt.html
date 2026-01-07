@@ -12,19 +12,19 @@
         <div class="card-body">
             <div class="row mb-4">
                 <div class="col-6">
-                    <strong>{{ session.business_name }}</strong><br>
-                    Served by: {{ sale.cashier_name }}<br>
+                    <strong>{{ session.business_name or 'StockFlow Shop' }}</strong><br>
+                    Served by: {{ sale.cashier_name or 'Unknown' }}<br>
                     Date: {{ sale.date.strftime('%d %B %Y, %H:%M') }}
                 </div>
                 <div class="col-6 text-end">
                     <strong>Receipt No:</strong> {{ sale._id }}<br>
-                    {% if client_name %}
+                    {% if client_name != 'Cash Sale' %}
                     <strong>Client:</strong> {{ client_name }}
                     {% endif %}
                 </div>
             </div>
 
-            {% if client_name %}
+            {% if client_name != 'Cash Sale' %}
             <div class="row mb-4 border p-3 bg-light">
                 <div class="col-6">
                     <strong>Customer Details:</strong><br>
@@ -34,9 +34,9 @@
                 </div>
                 <div class="col-6 text-end">
                     {% if sale.payment_method == 'credit' %}
-                    <strong>Previous Balance:</strong> KSh {{ "%.2f"|format(previous_balance) }}<br>
+                    <strong>Previous Balance:</strong> KSh {{ "%.2f"|format(previous_balance or 0.0) }}<br>
                     <strong>Sale Amount:</strong> KSh {{ "%.2f"|format(sale.total_amount) }}<br>
-                    <strong class="text-danger fs-5">New Balance: KSh {{ "%.2f"|format(new_balance) }}</strong>
+                    <strong class="text-danger fs-5">New Balance: KSh {{ "%.2f"|format(new_balance or 0.0) }}</strong>
                     {% endif %}
                 </div>
             </div>
@@ -54,17 +54,21 @@
                 <tbody>
                     {% for item in sale.items %}
                     <tr>
-                        <td>{{ item.product_name }}</td>
-                        <td>{{ item.quantity }}</td>
-                        <td>KSh {{ "%.2f"|format(item.selling_price) }}</td>
-                        <td>KSh {{ "%.2f"|format(item.line_total) }}</td>
+                        <td>{{ item.product_name or 'Unknown Product' }}</td>
+                        <td>{{ item.quantity or 0 }}</td>
+                        <td>KSh {{ "%.2f"|format(item.selling_price or 0.0) }}</td>
+                        <td>KSh {{ "%.2f"|format(item.line_total or 0.0) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center">No items</td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr class="table-dark">
                         <th colspan="3" class="text-end">Grand Total</th>
-                        <th>KSh {{ "%.2f"|format(sale.total_amount) }}</th>
+                        <th>KSh {{ "%.2f"|format(sale.total_amount or 0.0) }}</th>
                     </tr>
                 </tfoot>
             </table>
@@ -88,7 +92,6 @@
         body * { visibility: hidden; }
         .card, .card * { visibility: visible; }
         .card { position: absolute; left: 0; top: 0; width: 100%; }
-        .no-print { display: none; }
     }
 </style>
 {% endblock %}
