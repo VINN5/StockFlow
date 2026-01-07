@@ -50,7 +50,7 @@ def checkout():
     payment_method = data.get('payment_method', 'cash')
     client_id_str = data.get('client_id')
     
-    # Deduct stock safely
+    
     for item in items:
         try:
             product_id = ObjectId(item['product_id'])
@@ -67,7 +67,7 @@ def checkout():
             name = product['name'] if product else 'Unknown'
             return jsonify({'success': False, 'message': f'Not enough stock for {name}'}), 400
     
-    # Create sale
+    
     sale = {
         "items": items,
         "total_amount": total_amount,
@@ -94,7 +94,7 @@ def checkout():
     result = current_app.db.sales.insert_one(sale)
     sale_id = str(result.inserted_id)
     
-    # Update balance safely
+    
     if payment_method == 'credit' and client_id_str:
         try:
             current_app.db.clients.update_one(
@@ -102,7 +102,7 @@ def checkout():
                 {"$inc": {"balance": total_amount}}
             )
         except:
-            pass  # Log if needed, but don't crash sale
+            pass
     
     receipt_url = url_for('pos.receipt', sale_id=sale_id, _external=True)
     
@@ -138,7 +138,7 @@ def receipt(sale_id):
         flash('Sale not found or access denied', 'danger')
         return redirect(url_for('pos.index'))
     
-    # Safe defaults
+  
     client_name = 'Cash Sale'
     client_contact = None
     client_kra_pin = None
@@ -161,7 +161,7 @@ def receipt(sale_id):
             previous_balance = current_balance - sale.get('total_amount', 0.0)
             new_balance = current_balance
     
-    # The ultimate safe item enrichment
+   
     enriched_items = []
     for raw_item in sale.get('items', []):
         quantity = float(raw_item.get('quantity', 0))
@@ -172,8 +172,7 @@ def receipt(sale_id):
         product_id_str = raw_item.get('product_id')
         if product_id_str:
             try:
-                product_id = ObjectId(product_id_str)
-                product = current_app.db.products.find_one(product_id)
+                product = current_app.db.products.find_one(ObjectId(product_id_str))
                 if product:
                     product_name = product.get('name', 'Unknown Product')
             except:
@@ -186,12 +185,20 @@ def receipt(sale_id):
             'line_total': line_total
         })
     
-    sale['items'] = enriched_items
     
-    return render_template('pos_receipt.html',
-                           sale=sale,
-                           client_name=client_name,
-                           client_contact=client_contact,
-                           client_kra_pin=client_kra_pin,
-                           previous_balance=previous_balance,
-                           new_balance=new_balance)
+    context = {
+        'sale_id': str(sale['_id']),
+        'payment_method': sale.get('payment_method', 'cash'),
+        'total_amount': sale.get('total_amount', 0.0),
+        'cashier_name': sale.get('cashier_name', 'Unknown'),
+        'date_formatted': sale['date'].strftime('%d %B %Y, %H:%M') if 'date' in sale else 'Unknown Date',
+        'items': enriched_items,
+        'client_name': client_name,
+        'client_contact': client_contact,
+        'client_kra_pin': client_kra_pin,
+        'previous_balance': previous_balance,
+        'new_balance': new_balance,
+        'business_name': session.get('business_name', 'StockFlow Shop')
+    }
+    
+    return render_template('pos_receipt.html', **context)
