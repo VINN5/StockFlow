@@ -197,41 +197,74 @@ def dashboard():
                                potential_sales_value=potential_sales_value,
                                business_name=session.get('business_name', 'Your Branch'))
         
-        
 @app.route('/users')
 def users():
-    if 'user_id' not in session or session.get('role') not in ['admin', 'super_admin']:
-        flash('Admin access required', 'danger')
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_role = session.get('role')
+    
+    if user_role not in ['admin', 'super_admin']:
+        flash('Access denied: Admin required', 'danger')
         return redirect(url_for('dashboard'))
-
-    query = get_business_query()
-    all_users = list(db.users.find(query).sort("created_at", -1))
+    
+    if user_role == 'super_admin':
+        all_users = list(db.users.find().sort("created_at", -1))
+    else:
+        query = get_business_query()
+        all_users = list(db.users.find(query).sort("created_at", -1))
+    
+    
+    for user in all_users:
+        business_name = "—"
+        if user.get('business_id'):
+            biz = db.businesses.find_one({"_id": user['business_id']}, {"name": 1})
+            business_name = biz['name'] if biz else "Unknown"
+        user['business_name'] = business_name
+    
     return render_template('users.html', users=all_users)
 
 
 @app.route('/users/add', methods=['POST'])
 def add_user():
     if 'user_id' not in session or session.get('role') not in ['admin', 'super_admin']:
+        flash('Access denied', 'danger')
         return redirect(url_for('login'))
 
-    username = request.form['username']
+    username = request.form['username'].strip()
     password = request.form['password']
     role = request.form['role']
 
+    if not username or not password:
+        flash('Username and password are required', 'danger')
+        return redirect(url_for('users'))
+
     if db.users.find_one({"username": username}):
         flash('Username already exists', 'danger')
-    else:
-        hashed = bcrypt.generate_password_hash(password).decode('utf-8')
-        new_user = {
-            "username": username,
-            "password_hash": hashed,
-            "role": role,
-            "created_at": datetime.utcnow(),
-            "business_id": None 
-        }
-        db.users.insert_one(new_user)
-        flash('User added successfully!', 'success')
+        return redirect(url_for('users'))
 
+    hashed = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    new_user = {
+        "username": username,
+        "password_hash": hashed,
+        "role": role,
+        "created_at": datetime.utcnow()
+    }
+
+   
+    if session.get('role') != 'super_admin':
+        business_id = session.get('business_id')
+        if business_id:
+            try:
+                new_user['business_id'] = ObjectId(business_id)
+            except:
+                flash('Invalid business assignment', 'danger')
+                return redirect(url_for('users'))
+    
+
+    db.users.insert_one(new_user)
+    flash(f'User "{username}" added successfully!', 'success')
     return redirect(url_for('users'))
 
 
