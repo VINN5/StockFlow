@@ -38,12 +38,22 @@
                     <td>{{ user.business_name or '—' }}</td>
                     <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'Unknown' }}</td>
                     <td>
-                        {% if user._id|string != session.user_id and session.role in ['admin', 'super_admin'] %}
+                        {% if user._id|string != session.user_id %}
+                        {% if session.role in ['admin', 'super_admin'] %}
                         <a href="{{ url_for('delete_user', user_id=user._id) }}" 
-                           class="btn btn-sm btn-danger" 
+                           class="btn btn-sm btn-danger me-1" 
                            onclick="return confirm('Are you sure you want to delete {{ user.username }}? This cannot be undone.')">
-                            <i class="fas fa-trash"></i> Delete
+                            <i class="fas fa-trash"></i>
                         </a>
+                        {% endif %}
+
+                        {% if session.role == 'super_admin' %}
+                        <button class="btn btn-sm btn-warning" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#resetModal{{ user._id }}">
+                            <i class="fas fa-key"></i>
+                        </button>
+                        {% endif %}
                         {% endif %}
                     </td>
                 </tr>
@@ -105,5 +115,38 @@
             </div>
         </div>
     </div>
+
+    <!-- Reset Password Modals - Placed OUTSIDE the table loop -->
+    {% for user in users %}
+    {% if session.role == 'super_admin' and user._id|string != session.user_id %}
+    <div class="modal fade" id="resetModal{{ user._id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('reset_user_password', user_id=user._id) }}">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title">
+                            <i class="fas fa-key me-2"></i> Reset Password for {{ user.username }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">New Password</label>
+                            <input type="password" name="new_password" class="form-control" required minlength="6">
+                            <small class="form-text text-muted">Minimum 6 characters</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-sync me-2"></i> Reset Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
 </div>
 {% endblock %}

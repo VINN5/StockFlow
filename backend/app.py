@@ -296,6 +296,30 @@ def delete_user(user_id):
     return redirect(url_for('users'))
 
 
+@app.route('/users/reset_password/<user_id>', methods=['POST'])
+def reset_user_password(user_id):
+    if 'user_id' not in session or session.get('role') != 'super_admin':
+        flash('Access denied: Super Admin only', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    new_password = request.form.get('new_password')
+    if not new_password or len(new_password) < 6:
+        flash('Password must be at least 6 characters', 'danger')
+        return redirect(url_for('users'))
+    
+    hashed = bcrypt.generate_password_hash(new_password).decode('utf-8')
+    
+    result = db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"password_hash": hashed}}
+    )
+    
+    if result.modified_count:
+        flash('Password reset successfully!', 'success')
+    else:
+        flash('User not found or error occurred', 'danger')
+    
+    return redirect(url_for('users'))
 # ==================== SUPER ADMIN: BUSINESSES MANAGEMENT ====================
 
 @app.route('/businesses')
