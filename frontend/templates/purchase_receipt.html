@@ -3,27 +3,36 @@
 {% block title %}Purchase Receipt - StockFlow{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="card shadow-lg border-0">
-        <div class="card-header bg-primary text-white text-center py-4">
-            <h2 class="mb-0"><i class="fas fa-receipt me-2"></i>Purchase Receipt</h2>
-            <p class="mb-0 mt-2">StockFlow Inventory System</p>
+<div class="container mt-5 mb-5">
+    <div class="card border-dark shadow-lg">
+        <div class="card-header bg-dark text-white text-center py-4">
+            <h2 class="mb-0"><i class="fas fa-receipt me-2"></i> PURCHASE RECEIPT</h2>
+            <h4 class="mb-0 mt-2">StockFlow Inventory System</h4>
         </div>
+
         <div class="card-body p-5">
+            <!-- Header Info -->
             <div class="row mb-4">
                 <div class="col-md-6">
-                    <strong>Supplier:</strong> {{ supplier_name }}
+                    <strong>Business:</strong> {{ business_name }}<br>
+                    <strong>Received by:</strong> {{ session.username }}<br>
+                    <strong>Date & Time:</strong> {{ date_formatted }}
                 </div>
                 <div class="col-md-6 text-end">
-                    <strong>Date:</strong> {{ date_formatted }}
+                    <strong>Receipt No:</strong> {{ purchase_id }}<br>
+                    <strong>Supplier:</strong> {{ supplier_name }}
                 </div>
             </div>
-            
-            <h4 class="mb-3">Items Purchased</h4>
+
+            <hr class="border-dark">
+
+            <!-- Items Table -->
+            <h4 class="mb-4 text-center">Items Received</h4>
             <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead class="table-light">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-dark">
                         <tr>
+                            <th>#</th>
                             <th>Product</th>
                             <th class="text-center">Quantity</th>
                             <th class="text-end">Cost Price (KSh)</th>
@@ -33,37 +42,48 @@
                     <tbody>
                         {% for item in items %}
                         <tr>
+                            <td class="text-center">{{ loop.index }}</td>
                             <td>{{ item.product_name or 'Unknown Product' }}</td>
                             <td class="text-center">{{ item.quantity or 0 }}</td>
-                            <td class="text-end">{{ "%.2f"|format(item.purchase_price or 0.0) }}</td>
+                            <td class="text-end">{{ "%.2f"|format(item.cost_price or 0.0) }}</td>
                             <td class="text-end">{{ "%.2f"|format(item.line_total or 0.0) }}</td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" class="text-center text-muted">No items</td>
+                            <td colspan="5" class="text-center text-muted py-4">No items recorded</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
-                        <tr class="table-primary">
-                            <th colspan="3" class="text-end">Grand Total</th>
-                            <th class="text-end">KSh {{ "%.2f"|format(total_amount) }}</th>
+                        <tr class="table-primary fw-bold">
+                            <th colspan="4" class="text-end">Grand Total</th>
+                            <th class="text-end">KSh {{ "%.2f"|format(total_cost) }}</th>
                         </tr>
                     </tfoot>
                 </table>
             </div>
-            
+
+            <hr class="border-dark">
+
+            <!-- Footer Note -->
             <div class="text-center mt-5">
-                <button class="btn btn-success btn-lg" onclick="window.print()">
-                    <i class="fas fa-print me-2"></i>Print Receipt
+                <p class="lead text-muted mb-4">
+                    Thank you for maintaining accurate stock records.<br>
+                    This receipt confirms goods received into inventory.
+                </p>
+
+                <button class="btn btn-success btn-lg px-5" onclick="window.print()">
+                    <i class="fas fa-print me-2"></i> Print Receipt
                 </button>
-                <a href="/purchases" class="btn btn-secondary btn-lg ms-3">
-                    <i class="fas fa-arrow-left me-2"></i>Back to Purchases
+                <a href="/purchases" class="btn btn-outline-secondary btn-lg px-5 ms-3">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Purchases
                 </a>
             </div>
         </div>
-        <div class="card-footer text-center text-muted small">
-            Thank you for keeping accurate records!
+
+        <div class="card-footer text-center text-muted small py-3">
+            Powered by StockFlow — Professional Inventory & POS System<br>
+            Generated on {{ "now"|strftime('%d %B %Y at %H:%M') }}
         </div>
     </div>
 </div>
@@ -72,7 +92,15 @@
     @media print {
         body * { visibility: hidden; }
         .card, .card * { visibility: visible; }
-        .card { position: absolute; left: 0; top: 0; width: 100%; }
+        .card { 
+            position: absolute; 
+            left: 0; top: 0; 
+            width: 100%; 
+            box-shadow: none; 
+            border: 1px solid #000;
+        }
+        .no-print { display: none !important; }
+        .btn { display: none !important; }
     }
 </style>
 {% endblock %}

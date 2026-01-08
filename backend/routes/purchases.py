@@ -107,7 +107,6 @@ def receipt(purchase_id):
         flash('Invalid purchase ID', 'danger')
         return redirect(url_for('purchases.index'))
     
-    # Filter receipt by business_id
     query = {"_id": obj_id}
     if session.get('role') != 'super_admin':
         business_id = session.get('business_id')
@@ -123,14 +122,37 @@ def receipt(purchase_id):
         flash('Purchase not found or access denied', 'danger')
         return redirect(url_for('purchases.index'))
     
-    supplier = current_app.db.suppliers.find_one({"_id": purchase['supplier_id']})
-    supplier_name = supplier['name'] if supplier else 'Unknown'
+    # Safe supplier name
+    supplier_name = 'Unknown Supplier'
+    if purchase.get('supplier_id'):
+        supplier = current_app.db.suppliers.find_one(purchase['supplier_id'])
+        if supplier:
+            supplier_name = supplier.get('name', 'Unknown Supplier')
     
-    for item in purchase['items']:
-        product = current_app.db.products.find_one({"_id": ObjectId(item['product_id'])})
-        item['product_name'] = product['name'] if product else 'Unknown'
-        item['line_total'] = item['quantity'] * item['cost_price']
+    # Enrich items with product name — use cost_price to match template
+    enriched_items = []
+    for item in purchase.get('items', []):
+        product_name = 'Unknown Product'
+        if item.get('product_id'):
+            product = current_app.db.products.find_one(ObjectId(item['product_id']))
+            if product:
+                product_name = product.get('name', 'Unknown Product')
+        
+        enriched_items.append({
+            'product_name': product_name,
+            'quantity': item.get('quantity', 0),
+            'cost_price': item.get('cost_price', 0.0),  # ← match template
+            'line_total': item.get('quantity', 0) * item.get('cost_price', 0.0)
+        })
     
-    return render_template('purchase_receipt.html',
-                           purchase=purchase,
-                           supplier_name=supplier_name)
+    # Safe context — use total_cost
+    context = {
+        'purchase_id': str(purchase['_id']),
+        'date_formatted': purchase['date'].strftime('%d %B %Y, %H:%M') if 'date' in purchase else 'Unknown Date',
+        'supplier_name': supplier_name,
+        'total_cost': purchase.get('total_cost', 0.0),  # ← correct field
+        'items': enriched_items,
+        'business_name': session.get('business_name', 'StockFlow Business')
+    }
+    
+    return render_template('purchase_receipt.html', **context)
