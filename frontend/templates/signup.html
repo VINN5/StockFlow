@@ -47,13 +47,21 @@
 
                     <h4 class="text-center mb-4">Create Your Account</h4>
 
-                    {% with messages = get_flashed_messages() %}
+                    {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
-                            <div class="alert alert-success text-center">
-                                {{ messages[0] }}
-                            </div>
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} text-center">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
                         {% endif %}
                     {% endwith %}
+
+                    <!-- New Alert Message -->
+                    <div class="alert alert-info text-center mb-4">
+                        <strong>Note:</strong> Signup is only available for the initial super admin. 
+                        All other users (branch admins and cashiers) must be created by an administrator.
+                    </div>
 
                     <form method="POST">
                         <div class="mb-3">
@@ -74,7 +82,7 @@
                     </p>
 
                     <div class="text-center mt-4 text-muted small">
-                        First user becomes <strong>Admin</strong> with full access
+                        First user becomes <strong>Super Admin</strong> with full system access
                     </div>
                 </div>
             </div>
