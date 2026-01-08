@@ -15,7 +15,6 @@ def get_business_query():
         except:
             return {}
     return {}
-
 @bp.route('/')
 def index():
     if 'user_id' not in session:
@@ -25,17 +24,21 @@ def index():
     query = get_business_query()
     purchases = list(current_app.db.purchases.find(query).sort("date", -1))
     
-    # Get suppliers and products (filtered for non-super_admin)
+    # Get suppliers and products (filtered)
     supplier_query = get_business_query()
     product_query = get_business_query()
     
     suppliers = {str(s['_id']): s['name'] for s in current_app.db.suppliers.find(supplier_query)}
     products = {str(p['_id']): p['name'] for p in current_app.db.products.find(product_query)}
     
+    # Safe enrichment
     for purchase in purchases:
-        purchase['supplier_name'] = suppliers.get(str(purchase['supplier_id']), 'Unknown')
-        for item in purchase['items']:
-            item['product_name'] = products.get(str(item['product_id']), 'Unknown')
+        supplier_id_str = str(purchase.get('supplier_id', '')) if purchase.get('supplier_id') else ''
+        purchase['supplier_name'] = suppliers.get(supplier_id_str, 'Unknown Supplier')
+        
+        for item in purchase.get('items', []):
+            product_id_str = str(item.get('product_id', '')) if item.get('product_id') else ''
+            item['product_name'] = products.get(product_id_str, 'Unknown Product')
     
     return render_template('purchases.html', purchases=purchases)
 
