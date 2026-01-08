@@ -90,24 +90,38 @@ def login():
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
+    # Only allow signup if no users exist (for initial super_admin)
+    if db.users.count_documents({}) > 0:
+        flash('Signup is disabled. New users must be created by an administrator.', 'info')
+        return redirect(url_for('login'))
+    
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip()
         password = request.form['password']
-
+        
+        if not username or not password:
+            flash('Username and password are required', 'danger')
+            return render_template('signup.html')
+        
         if db.users.find_one({"username": username}):
-            flash('Username already exists', 'error')
-        else:
-            role = "super_admin" if db.users.count_documents({}) == 0 else "cashier"
-            user = User(username, password, role)
-            user_dict = user.to_dict()
-            if role != "super_admin":
-                user_dict['business_id'] = None  
-            db.users.insert_one(user_dict)
-            flash('Account created successfully! Please log in.', 'success')
-            return redirect(url_for('login'))
-
+            flash('Username already exists', 'danger')
+            return render_template('signup.html')
+        
+        # Create the first super_admin
+        hashed = bcrypt.generate_password_hash(password).decode('utf-8')
+        new_user = {
+            "username": username,
+            "password_hash": hashed,
+            "role": "super_admin",
+            "created_at": datetime.utcnow()
+            # No business_id for super_admin
+        }
+        db.users.insert_one(new_user)
+        
+        flash('Initial super admin account created successfully! Please log in.', 'success')
+        return redirect(url_for('login'))
+    
     return render_template('signup.html')
-
 
 @app.route('/dashboard')
 def dashboard():
