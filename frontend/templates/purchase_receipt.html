@@ -15,7 +15,7 @@
                     <strong>Supplier:</strong> {{ supplier_name }}
                 </div>
                 <div class="col-md-6 text-end">
-                    <strong>Date:</strong> {{ purchase.date.strftime('%d %B %Y, %H:%M') }}
+                    <strong>Date:</strong> {{ date_formatted }}
                 </div>
             </div>
             
@@ -31,19 +31,23 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in purchase.items %}
+                        {% for item in items %}
                         <tr>
-                            <td>{{ item.product_name }}</td>
-                            <td class="text-center">{{ item.quantity }}</td>
-                            <td class="text-end">{{ "%.2f"|format(item.cost_price) }}</td>
-                            <td class="text-end">{{ "%.2f"|format(item.line_total) }}</td>
+                            <td>{{ item.product_name or 'Unknown Product' }}</td>
+                            <td class="text-center">{{ item.quantity or 0 }}</td>
+                            <td class="text-end">{{ "%.2f"|format(item.purchase_price or 0.0) }}</td>
+                            <td class="text-end">{{ "%.2f"|format(item.line_total or 0.0) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No items</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
                         <tr class="table-primary">
                             <th colspan="3" class="text-end">Grand Total</th>
-                            <th class="text-end">KSh {{ "%.2f"|format(purchase.total_cost) }}</th>
+                            <th class="text-end">KSh {{ "%.2f"|format(total_amount) }}</th>
                         </tr>
                     </tfoot>
                 </table>
@@ -69,7 +73,6 @@
         body * { visibility: hidden; }
         .card, .card * { visibility: visible; }
         .card { position: absolute; left: 0; top: 0; width: 100%; }
-        .no-print { display: none; }
     }
 </style>
 {% endblock %}
