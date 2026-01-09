@@ -1,11 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson.objectid import ObjectId
 
 from pymongo import MongoClient
 from flask_bcrypt import Bcrypt
-
 
 from .config import Config
 from .models.user import User
@@ -16,7 +15,6 @@ from .routes.pos import bp as pos_bp
 from .routes.sales import bp as sales_bp
 from .routes.clients import bp as clients_bp
 from .routes.payments import bp as payments_bp
-
 
 app = Flask(
     __name__,
@@ -52,13 +50,11 @@ def get_business_query():
             return {}
     return {}
 
-
 @app.route('/')
 def index():
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -87,7 +83,6 @@ def login():
 
     return render_template('login.html')
 
-
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     # Only allow signup if no users exist (for initial super_admin)
@@ -114,7 +109,6 @@ def signup():
             "password_hash": hashed,
             "role": "super_admin",
             "created_at": datetime.utcnow()
-            # No business_id for super_admin
         }
         db.users.insert_one(new_user)
         
@@ -165,52 +159,86 @@ def dashboard():
                                businesses=all_businesses,
                                business_name="System Control Panel")
     
-    else:
-        # Branch Admin / Cashier: Operational view with filtered data
-        query = get_business_query()
+    # Branch Admin / Cashier: Operational view with filtered data
+    query = get_business_query()
+    
+    products = list(db.products.find(query))
+    
+    total_products = len(products)
+    low_stock_count = len([p for p in products if p.get('current_quantity', 0) < p.get('min_stock', 10)])
+    
+    # Time ranges for sales & profit
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=today_start.weekday())  # Monday
+    month_start = today_start.replace(day=1)
+    year_start = today_start.replace(month=1, day=1)
+
+    # Fetch all sales from start of year (efficient)
+    sales_query = {**query, "date": {"$gte": year_start}}
+    all_sales = list(db.sales.find(sales_query))
+
+    # Sales totals
+    daily_sales = sum(s.get('total_amount', 0.0) for s in all_sales if s['date'] >= today_start)
+    weekly_sales = sum(s.get('total_amount', 0.0) for s in all_sales if s['date'] >= week_start)
+    monthly_sales = sum(s.get('total_amount', 0.0) for s in all_sales if s['date'] >= month_start)
+    yearly_sales = sum(s.get('total_amount', 0.0) for s in all_sales)
+
+    # Today's sales for detailed list
+    today_sales = [s for s in all_sales if s['date'] >= today_start]
+    today_sales_total = daily_sales
+
+    # Enrich today's sales with client name
+    for sale in today_sales:
+        sale['client_name'] = 'Cash Sale'
+        if sale.get('client_id'):
+            client = db.clients.find_one({"_id": sale['client_id']})
+            if client:
+                sale['client_name'] = client.get('name', 'Unknown Client')
+        sale['items_count'] = len(sale.get('items', []))
+
+    # Profit calculation (selling price - purchase price)
+    daily_profit = weekly_profit = monthly_profit = 0.0
+    for sale in all_sales:
+        sale_profit = 0.0
+        for item in sale.get('items', []):
+            product = db.products.find_one({"_id": ObjectId(item['product_id'])}, {"purchase_price": 1})
+            cost_price = product['purchase_price'] if product else 0.0
+            sale_profit += item['quantity'] * (item['selling_price'] - cost_price)
         
-        products = list(db.products.find(query))
-        
-        total_products = len(products)
-        low_stock_count = len([p for p in products if p.get('current_quantity', 0) < p.get('min_stock', 10)])
-        
-        # Today's sales total
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        today_sales = list(db.sales.find({
-            "date": {"$gte": today_start},
-            **query
-        }).sort("date", -1))
-        
-        today_sales_total = sum(s.get('total_amount', 0.0) for s in today_sales)
-        
-        # Enrich today's sales with client name for admin list
-        for sale in today_sales:
-            sale['client_name'] = 'Cash Sale'
-            if sale.get('client_id'):
-                client = db.clients.find_one({"_id": sale['client_id']})
-                if client:
-                    sale['client_name'] = client.get('name', 'Unknown Client')
-            sale['items_count'] = len(sale.get('items', []))
-        
-        # Financial stats only for branch admin
-        is_branch_admin = user_role == 'admin'
-        current_stock_value = 0.0
-        potential_sales_value = 0.0
-        if is_branch_admin:
-            current_stock_value = sum(p.get('current_quantity', 0) * p.get('purchase_price', 0) for p in products)
-            potential_sales_value = sum(p.get('current_quantity', 0) * p.get('selling_price', 0) for p in products)
-        
-        return render_template('dashboard.html',
-                               is_super_admin=False,
-                               is_branch_admin=is_branch_admin,
-                               total_products=total_products,
-                               low_stock_count=low_stock_count,
-                               today_sales_total=today_sales_total,
-                               today_sales=today_sales,  
-                               current_stock_value=current_stock_value,
-                               potential_sales_value=potential_sales_value,
-                               business_name=session.get('business_name', 'Your Branch'))
-        
+        if sale['date'] >= today_start:
+            daily_profit += sale_profit
+        if sale['date'] >= week_start:
+            weekly_profit += sale_profit
+        if sale['date'] >= month_start:
+            monthly_profit += sale_profit
+
+    # Financial stats only for branch admin
+    is_branch_admin = user_role == 'admin'
+    current_stock_value = 0.0
+    potential_sales_value = 0.0
+    if is_branch_admin:
+        current_stock_value = sum(p.get('current_quantity', 0) * p.get('purchase_price', 0) for p in products)
+        potential_sales_value = sum(p.get('current_quantity', 0) * p.get('selling_price', 0) for p in products)
+    
+    return render_template('dashboard.html',
+                           is_super_admin=False,
+                           is_branch_admin=is_branch_admin,
+                           total_products=total_products,
+                           low_stock_count=low_stock_count,
+                           today_sales_total=today_sales_total,
+                           daily_sales=daily_sales,
+                           weekly_sales=weekly_sales,
+                           monthly_sales=monthly_sales,
+                           yearly_sales=yearly_sales,
+                           daily_profit=round(daily_profit, 2),
+                           weekly_profit=round(weekly_profit, 2),
+                           monthly_profit=round(monthly_profit, 2),
+                           today_sales=today_sales,
+                           current_stock_value=current_stock_value,
+                           potential_sales_value=potential_sales_value,
+                           business_name=session.get('business_name', 'Your Branch'))
+
 @app.route('/users')
 def users():
     if 'user_id' not in session:
@@ -228,7 +256,6 @@ def users():
         query = get_business_query()
         all_users = list(db.users.find(query).sort("created_at", -1))
     
-    
     for user in all_users:
         business_name = "—"
         if user.get('business_id'):
@@ -237,7 +264,6 @@ def users():
         user['business_name'] = business_name
     
     return render_template('users.html', users=all_users)
-
 
 @app.route('/users/add', methods=['POST'])
 def add_user():
@@ -266,7 +292,6 @@ def add_user():
         "created_at": datetime.utcnow()
     }
 
-   
     if session.get('role') != 'super_admin':
         business_id = session.get('business_id')
         if business_id:
@@ -275,12 +300,10 @@ def add_user():
             except:
                 flash('Invalid business assignment', 'danger')
                 return redirect(url_for('users'))
-    
 
     db.users.insert_one(new_user)
     flash(f'User "{username}" added successfully!', 'success')
     return redirect(url_for('users'))
-
 
 @app.route('/users/delete/<user_id>')
 def delete_user(user_id):
@@ -294,7 +317,6 @@ def delete_user(user_id):
     db.users.delete_one({"_id": ObjectId(user_id)})
     flash('User deleted', 'info')
     return redirect(url_for('users'))
-
 
 @app.route('/users/reset_password/<user_id>', methods=['POST'])
 def reset_user_password(user_id):
@@ -320,6 +342,7 @@ def reset_user_password(user_id):
         flash('User not found or error occurred', 'danger')
     
     return redirect(url_for('users'))
+
 # ==================== SUPER ADMIN: BUSINESSES MANAGEMENT ====================
 
 @app.route('/businesses')
@@ -344,7 +367,6 @@ def businesses():
         })
     
     return render_template('businesses.html', businesses=businesses_with_admins)
-
 
 @app.route('/businesses/create', methods=['POST'])
 def create_business():
@@ -384,7 +406,6 @@ def create_business():
     flash(f'Business "{business_name}" created with admin "{admin_username}"!', 'success')
     return redirect(url_for('businesses') + '?t=' + str(int(datetime.utcnow().timestamp())))
 
-
 @app.route('/businesses/delete/<business_id>', methods=['POST'])
 def delete_business(business_id):
     if 'user_id' not in session or session.get('role') != 'super_admin':
@@ -417,22 +438,18 @@ def delete_business(business_id):
     
     return redirect(url_for('businesses'))
 
-
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
-
 @app.errorhandler(404)
 def not_found(e):
     return render_template('404.html'), 404
 
-
 @app.errorhandler(500)
 def server_error(e):
     return render_template('500.html'), 500
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
