@@ -138,9 +138,9 @@ def receipt(purchase_id):
         if supplier:
             supplier_name = supplier.get('name', 'Unknown Supplier')
     
-    # Enrich items with product name — use cost_price to match template
+    # Convert items to list and enrich
     enriched_items = []
-    for item in purchase.get('items', []):
+    for item in list(purchase.get('items', [])):  # ← convert to list here
         product_name = 'Unknown Product'
         if item.get('product_id'):
             product = current_app.db.products.find_one(ObjectId(item['product_id']))
@@ -154,13 +154,13 @@ def receipt(purchase_id):
             'line_total': item.get('quantity', 0) * item.get('cost_price', 0.0)
         })
     
-    # Safe context — use total_cost
+    # Safe context
     context = {
         'purchase_id': str(purchase['_id']),
         'date_formatted': purchase['date'].strftime('%d %B %Y, %H:%M') if 'date' in purchase else 'Unknown Date',
         'supplier_name': supplier_name,
         'total_cost': purchase.get('total_cost', 0.0),
-        'items': enriched_items,
+        'items': enriched_items,  # ← now a real list
         'business_name': session.get('business_name', 'StockFlow Business')
     }
     
