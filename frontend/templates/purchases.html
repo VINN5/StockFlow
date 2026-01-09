@@ -46,7 +46,7 @@
                     </td>
                     <td><strong>KSh {{ "%.2f"|format(purchase.total_cost or 0.0) }}</strong></td>
                     <td>
-                        <a href="{{ url_for('purchases.receipt', purchase_id=purchase._id) }}" 
+                        <a href="/purchases/receipt/{{ purchase._id|string }}" 
                            class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-receipt"></i> View Receipt
                         </a>
