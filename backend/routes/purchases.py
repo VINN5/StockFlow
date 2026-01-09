@@ -15,6 +15,7 @@ def get_business_query():
         except:
             return {}
     return {}
+
 @bp.route('/')
 def index():
     if 'user_id' not in session:
@@ -36,9 +37,14 @@ def index():
         supplier_id_str = str(purchase.get('supplier_id', '')) if purchase.get('supplier_id') else ''
         purchase['supplier_name'] = suppliers.get(supplier_id_str, 'Unknown Supplier')
         
-        for item in purchase.get('items', []):
+        # Convert items to list (critical fix!)
+        purchase_items = list(purchase.get('items', []))
+        for item in purchase_items:
             product_id_str = str(item.get('product_id', '')) if item.get('product_id') else ''
             item['product_name'] = products.get(product_id_str, 'Unknown Product')
+        
+        # Replace with list to make it iterable in template
+        purchase['items'] = purchase_items
     
     return render_template('purchases.html', purchases=purchases)
 
@@ -144,7 +150,7 @@ def receipt(purchase_id):
         enriched_items.append({
             'product_name': product_name,
             'quantity': item.get('quantity', 0),
-            'cost_price': item.get('cost_price', 0.0),  # ← match template
+            'cost_price': item.get('cost_price', 0.0),
             'line_total': item.get('quantity', 0) * item.get('cost_price', 0.0)
         })
     
@@ -153,7 +159,7 @@ def receipt(purchase_id):
         'purchase_id': str(purchase['_id']),
         'date_formatted': purchase['date'].strftime('%d %B %Y, %H:%M') if 'date' in purchase else 'Unknown Date',
         'supplier_name': supplier_name,
-        'total_cost': purchase.get('total_cost', 0.0),  # ← correct field
+        'total_cost': purchase.get('total_cost', 0.0),
         'items': enriched_items,
         'business_name': session.get('business_name', 'StockFlow Business')
     }

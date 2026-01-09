@@ -34,14 +34,16 @@
                     <td>{{ purchase.supplier_name or 'Unknown Supplier' }}</td>
                     <td>
                         <ul class="mb-0 ps-3">
+                            {% if purchase.items is iterable and purchase.items %}
                             {% for item in purchase.items %}
                             <li>
                                 {{ item.quantity or 0 }} × {{ item.product_name or 'Unknown Product' }} 
                                 @ KSh {{ "%.2f"|format(item.cost_price or 0.0) }}
                             </li>
+                            {% endfor %}
                             {% else %}
                             <li class="text-muted">No items</li>
-                            {% endfor %}
+                            {% endif %}
                         </ul>
                     </td>
                     <td><strong>KSh {{ "%.2f"|format(purchase.total_cost or 0.0) }}</strong></td>
