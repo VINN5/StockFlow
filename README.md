@@ -1,3 +1,19 @@
+## Live Demo
+
+Try the live version here:  
+🔗 **https://stockflow-to60.onrender.com** (may take 10–30 seconds to wake up on first visit)
+
+Login credentials (demo):  
+- Username: demo  
+- Password: demo123
+
+## Tech Stack
+- Backend: Flask (Python)
+- Database: MongoDB (Atlas cloud)
+- Frontend: Bootstrap 5, Font Awesome, vanilla JavaScript
+- Authentication: Flask-Bcrypt
+- Deployment: Render (free tier)
+
 # StockFlow - Inventory & POS System 🇰🇪
 
 A modern, web-based inventory management and point-of-sale (POS) system built for small to medium supermarkets and shops in Kenya.
