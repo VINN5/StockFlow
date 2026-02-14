@@ -1,57 +1,59 @@
+<!-- @ts-nocheck -->
 {% extends "base.html" %}
 
 {% block title %}Businesses - StockFlow{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4 px-3">
     <h1 class="mb-4 text-primary"><i class="fas fa-building me-2"></i>Business Management</h1>
-    
-   
+
+    <!-- Create form -->
     <div class="row mb-5">
-        <div class="col-lg-9">
+        <div class="col-12 col-lg-9">
             <div class="card shadow border-0">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Create New Business & Branch Admin</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('create_business') }}">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label fw-bold">Business Name</label>
                                 <input type="text" name="business_name" class="form-control" placeholder="e.g., Thika Branch" required>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label fw-bold">Location</label>
                                 <input type="text" name="location" class="form-control" placeholder="e.g., Thika, Kenya" required>
                             </div>
                         </div>
-                        <hr class="my-4">
+                        <hr class="my-3">
                         <h6 class="text-primary mb-3">Branch Admin Account</h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label fw-bold">Admin Username</label>
                                 <input type="text" name="admin_username" class="form-control" placeholder="e.g., thika_manager" required>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label fw-bold">Admin Password</label>
                                 <input type="password" name="admin_password" class="form-control" required>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-success btn-lg px-5">
-                            <i class="fas fa-save me-2"></i>Create Business & Admin
-                        </button>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-success btn-lg w-100 w-md-auto px-5">
+                                <i class="fas fa-save me-2"></i>Create Business & Admin
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-      
     <h3 class="text-primary mb-4"><i class="fas fa-list me-2"></i>Existing Businesses</h3>
-    
+
     {% if businesses %}
     <div class="table-responsive">
-        <table class="table table-hover table-striped align-middle shadow-sm">
+        <table class="table table-hover table-striped align-middle shadow-sm table-card-mobile">
             <thead class="table-dark">
                 <tr>
                     <th>Business Name</th>
@@ -65,10 +67,10 @@
                 {% for item in businesses %}
                 {% set biz = item.business %}
                 <tr>
-                    <td><strong>{{ biz.name }}</strong></td>
-                    <td>{{ biz.location or '—' }}</td>
-                    <td>{{ biz.created_at.strftime('%b %d, %Y') }}</td>
-                    <td>
+                    <td data-label="Business Name"><strong>{{ biz.name }}</strong></td>
+                    <td data-label="Location">{{ biz.location or '—' }}</td>
+                    <td data-label="Created">{{ biz.created_at.strftime('%b %d, %Y') }}</td>
+                    <td data-label="Admins">
                         {% if item.admins %}
                             {% for username in item.admins %}
                             <span class="badge bg-primary me-1">{{ username }}</span>
@@ -77,8 +79,8 @@
                             <em class="text-muted">No admin assigned</em>
                         {% endif %}
                     </td>
-                    <td>
-                        <form method="POST" action="{{ url_for('delete_business', business_id=biz._id) }}" 
+                    <td data-label="Actions">
+                        <form method="POST" action="{{ url_for('delete_business', business_id=biz._id) }}"
                               onsubmit="return confirm('Are you sure you want to delete \"{{ biz.name }}\"? This will also delete its branch admin(s). This action cannot be undone.');"
                               style="display: inline;">
                             <button type="submit" class="btn btn-danger btn-sm">

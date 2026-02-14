@@ -3,15 +3,15 @@
 {% block title %}Purchases - StockFlow{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4 px-3">
     <h1 class="mb-4">Purchase History</h1>
 
     <a href="/purchases/new" class="btn btn-primary mb-4">
-        <i class="fas fa-plus me-2"></i> Record New Purchase
+        <i class="fas fa-plus me-2"></i>Record New Purchase
     </a>
 
     <div class="table-responsive">
-        <table class="table table-hover align-middle">
+        <table class="table table-hover align-middle table-card-mobile">
             <thead class="table-dark">
                 <tr>
                     <th>Date</th>
@@ -24,41 +24,31 @@
             <tbody>
                 {% for purchase in purchases %}
                 <tr>
-                    <td>
-                        {% if purchase.date %}
-                        {{ purchase.date.strftime('%Y-%m-%d %H:%M') }}
-                        {% else %}
-                        Unknown Date
-                        {% endif %}
+                    <td data-label="Date">
+                        {% if purchase.date %}{{ purchase.date.strftime('%Y-%m-%d %H:%M') }}{% else %}Unknown Date{% endif %}
                     </td>
-                    <td>{{ purchase.supplier_name or 'Unknown Supplier' }}</td>
-                    <td>
-                        <ul class="mb-0 ps-3">
+                    <td data-label="Supplier">{{ purchase.supplier_name or 'Unknown Supplier' }}</td>
+                    <td data-label="Items">
+                        <ul class="mb-0 ps-3 small">
                             {% if purchase.items is iterable and purchase.items %}
                             {% for item in purchase.items %}
-                            <li>
-                                {{ item.quantity or 0 }} × {{ item.product_name or 'Unknown Product' }} 
-                                @ KSh {{ "%.2f"|format(item.cost_price or 0.0) }}
-                            </li>
+                            <li>{{ item.quantity or 0 }} × {{ item.product_name or 'Unknown' }} @ KSh {{ "%.2f"|format(item.cost_price or 0.0) }}</li>
                             {% endfor %}
                             {% else %}
                             <li class="text-muted">No items</li>
                             {% endif %}
                         </ul>
                     </td>
-                    <td><strong>KSh {{ "%.2f"|format(purchase.total_cost or 0.0) }}</strong></td>
-                    <td>
-                        <a href="/purchases/receipt/{{ purchase._id|string }}" 
-                           class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-receipt"></i> View Receipt
+                    <td data-label="Total Cost"><strong>KSh {{ "%.2f"|format(purchase.total_cost or 0.0) }}</strong></td>
+                    <td data-label="Actions">
+                        <a href="/purchases/receipt/{{ purchase._id|string }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-receipt me-1"></i>Receipt
                         </a>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="text-center py-5 text-muted">
-                        No purchases recorded yet.
-                    </td>
+                    <td colspan="5" class="text-center py-5 text-muted">No purchases recorded yet.</td>
                 </tr>
                 {% endfor %}
             </tbody>

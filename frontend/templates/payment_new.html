@@ -3,40 +3,49 @@
 {% block title %}Record Payment - StockFlow{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4 px-3">
     <h1 class="mb-4">Record Payment Received</h1>
-    
-    <div class="card shadow">
-        <div class="card-body">
-            <form method="POST" action="{{ url_for('payments.add') }}">
-                <div class="mb-3">
-                    <label class="form-label">Client</label>
-                    <select name="client_id" class="form-select" required>
-                        <option value="">Select client</option>
-                        {% for client in clients %}
-                        <option value="{{ client._id }}">{{ client.name }} (Balance: KSh {{ "%.2f"|format(client.balance) }})</option>
-                        {% endfor %}
-                    </select>
+
+    <div class="row">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('payments.add') }}">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Client</label>
+                            <select name="client_id" class="form-select" required>
+                                <option value="">Select client</option>
+                                {% for client in clients %}
+                                <option value="{{ client._id }}">{{ client.name }} (Balance: KSh {{ "%.2f"|format(client.balance) }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Amount Received</label>
+                            <div class="input-group">
+                                <span class="input-group-text">KSh</span>
+                                <input type="number" name="amount" step="0.01" class="form-control form-control-lg" required min="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Payment Method</label>
+                            <select name="method" class="form-select">
+                                <option value="Cash">Cash</option>
+                                <option value="M-Pesa">M-Pesa</option>
+                                <option value="Bank">Bank Transfer</option>
+                                <option value="Cheque">Cheque</option>
+                            </select>
+                        </div>
+
+                        <div class="d-grid gap-2 d-sm-flex">
+                            <button type="submit" class="btn btn-success btn-lg flex-grow-1">Record Payment</button>
+                            <a href="{{ url_for('payments.index') }}" class="btn btn-secondary btn-lg">Cancel</a>
+                        </div>
+                    </form>
                 </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Amount Received</label>
-                    <input type="number" name="amount" step="0.01" class="form-control" required min="0.01">
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Payment Method</label>
-                    <select name="method" class="form-select">
-                        <option value="Cash">Cash</option>
-                        <option value="M-Pesa">M-Pesa</option>
-                        <option value="Bank">Bank Transfer</option>
-                        <option value="Cheque">Cheque</option>
-                    </select>
-                </div>
-                
-                <button type="submit" class="btn btn-success btn-lg">Record Payment</button>
-                <a href="{{ url_for('payments.index') }}" class="btn btn-secondary btn-lg ms-2">Cancel</a>
-            </form>
+            </div>
         </div>
     </div>
 </div>

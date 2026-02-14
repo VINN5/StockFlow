@@ -3,54 +3,56 @@
 {% block title %}Clients - StockFlow{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4 px-3">
     <h1 class="mb-4">Client Management</h1>
-    
-    <!-- Official KRA PIN Verification Link -->
+
+    <!-- KRA PIN alert -->
     <div class="alert alert-info mb-4">
         <i class="fas fa-info-circle me-2"></i>
-        <strong>Verify KRA PIN:</strong> To confirm a client's PIN is genuine and active, use the official KRA checker: 
-        <a href="https://itax.kra.go.ke/KRA-Portal/pinChecker.htm" target="_blank" class="alert-link">
-            https://itax.kra.go.ke/KRA-Portal/pinChecker.htm <i class="fas fa-external-link-alt ms-1"></i>
+        <strong>Verify KRA PIN:</strong> Use the official KRA checker:
+        <a href="https://itax.kra.go.ke/KRA-Portal/pinChecker.htm" target="_blank" class="alert-link d-inline-block text-break">
+            itax.kra.go.ke/KRA-Portal/pinChecker.htm <i class="fas fa-external-link-alt ms-1"></i>
         </a>
     </div>
 
+    <!-- Add Client form -->
     <div class="card shadow mb-4">
         <div class="card-header bg-primary text-white">
             <h5 class="mb-0">Add New Client</h5>
         </div>
         <div class="card-body">
             <form method="POST" action="{{ url_for('clients.add') }}">
-                <div class="row">
-                    <div class="col-md-4 mb-3">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
                         <label class="form-label">Name *</label>
                         <input type="text" name="name" class="form-control" required>
                     </div>
-                    <div class="col-md-3 mb-3">
+                    <div class="col-12 col-md-3">
                         <label class="form-label">Contact</label>
                         <input type="text" name="contact" class="form-control" placeholder="e.g., 0712345678">
                     </div>
-                    <div class="col-md-3 mb-3">
+                    <div class="col-12 col-md-3">
                         <label class="form-label">KRA PIN</label>
-                        <input type="text" 
-                               name="kra_pin" 
-                               class="form-control" 
+                        <input type="text"
+                               name="kra_pin"
+                               class="form-control"
                                placeholder="e.g., A00123456B"
-                               pattern="[AP][0-9]{9}[A-Z]" 
+                               pattern="[AP][0-9]{9}[A-Z]"
                                title="KRA PIN format: A or P + 9 digits + letter (e.g., A00123456B)">
-                        <small class="form-text text-muted">Optional but recommended for tax compliance</small>
+                        <small class="form-text text-muted">Optional, recommended for tax compliance</small>
                     </div>
-                    <div class="col-md-2 mb-3 d-flex align-items-end">
-                        <button type="submit" class="btn btn-success">Add Client</button>
+                    <div class="col-12 col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-success w-100">Add Client</button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <h3>Current Clients</h3>
+    <h3 class="mb-3">Current Clients</h3>
+
     <div class="table-responsive">
-        <table class="table table-striped">
+        <table class="table table-striped table-card-mobile">
             <thead class="table-dark">
                 <tr>
                     <th>Name</th>
@@ -62,10 +64,10 @@
             <tbody>
                 {% for client in clients %}
                 <tr>
-                    <td><strong>{{ client.name }}</strong></td>
-                    <td>{{ client.contact or '—' }}</td>
-                    <td>{{ client.kra_pin or '—' }}</td>
-                    <td>
+                    <td data-label="Name"><strong>{{ client.name }}</strong></td>
+                    <td data-label="Contact">{{ client.contact or '—' }}</td>
+                    <td data-label="KRA PIN">{{ client.kra_pin or '—' }}</td>
+                    <td data-label="Balance">
                         {% if client.balance > 0 %}
                         <span class="badge bg-danger">KSh {{ "%.2f"|format(client.balance) }}</span>
                         {% elif client.balance < 0 %}

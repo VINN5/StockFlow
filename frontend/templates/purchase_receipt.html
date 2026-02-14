@@ -3,86 +3,87 @@
 {% block title %}Purchase Receipt - StockFlow{% endblock %}
 
 {% block content %}
-<div class="container mt-5 mb-5">
-    <div class="card border-dark shadow-lg">
-        <div class="card-header bg-dark text-white text-center py-4">
-            <h2 class="mb-0"><i class="fas fa-receipt me-2"></i> PURCHASE RECEIPT</h2>
-            <h4 class="mb-0 mt-2">StockFlow Inventory System</h4>
-        </div>
-
-        <div class="card-body p-5">
-            <!-- Header Info -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <strong>Business:</strong> {{ business_name }}<br>
-                    <strong>Received by:</strong> {{ session.username }}<br>
-                    <strong>Date & Time:</strong> {{ date_formatted }}
+<div class="container-fluid mt-4 px-3">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-8">
+            <div class="card border-dark shadow-lg">
+                <div class="card-header bg-dark text-white text-center py-3">
+                    <h3 class="mb-0"><i class="fas fa-receipt me-2"></i>PURCHASE RECEIPT</h3>
+                    <h5 class="mb-0 mt-1 opacity-75">StockFlow Inventory System</h5>
                 </div>
-                <div class="col-md-6 text-end">
-                    <strong>Receipt No:</strong> {{ purchase_id }}<br>
-                    <strong>Supplier:</strong> {{ supplier_name }}
+
+                <div class="card-body p-3 p-sm-4">
+                    <!-- Header -->
+                    <div class="row mb-3 g-2">
+                        <div class="col-12 col-sm-6">
+                            <p class="mb-1"><strong>Business:</strong> {{ business_name }}</p>
+                            <p class="mb-1"><strong>Received by:</strong> {{ session.username }}</p>
+                            <p class="mb-0"><strong>Date:</strong> {{ date_formatted }}</p>
+                        </div>
+                        <div class="col-12 col-sm-6 text-sm-end">
+                            <p class="mb-1"><strong>Receipt No:</strong> {{ purchase_id }}</p>
+                            <p class="mb-0"><strong>Supplier:</strong> {{ supplier_name }}</p>
+                        </div>
+                    </div>
+
+                    <hr class="border-dark">
+
+                    <h5 class="mb-3 text-center">Items Received</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover table-card-mobile">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th>Qty</th>
+                                    <th>Cost Price</th>
+                                    <th>Line Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td data-label="#">{{ loop.index }}</td>
+                                    <td data-label="Product">{{ item.product_name or 'Unknown' }}</td>
+                                    <td data-label="Qty">{{ item.quantity or 0 }}</td>
+                                    <td data-label="Cost Price">KSh {{ "%.2f"|format(item.cost_price or 0.0) }}</td>
+                                    <td data-label="Line Total">KSh {{ "%.2f"|format(item.line_total or 0.0) }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-center text-muted py-3">No items recorded</td></tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-primary fw-bold">
+                                    <th colspan="4" class="text-end">Grand Total</th>
+                                    <th>KSh {{ "%.2f"|format(total_cost) }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <hr class="border-dark">
+
+                    <div class="text-center mt-4">
+                        <p class="text-muted small mb-4">
+                            Thank you for maintaining accurate stock records.<br>
+                            This receipt confirms goods received into inventory.
+                        </p>
+                        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                            <button class="btn btn-success btn-lg" onclick="window.print()">
+                                <i class="fas fa-print me-2"></i>Print Receipt
+                            </button>
+                            <a href="/purchases" class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-arrow-left me-2"></i>Back
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer text-center text-muted small py-2">
+                    Powered by StockFlow — Professional Inventory & POS System
                 </div>
             </div>
-
-            <hr class="border-dark">
-
-            <!-- Items Table -->
-            <h4 class="mb-4 text-center">Items Received</h4>
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>#</th>
-                            <th>Product</th>
-                            <th class="text-center">Quantity</th>
-                            <th class="text-end">Cost Price (KSh)</th>
-                            <th class="text-end">Line Total (KSh)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in items %}
-                        <tr>
-                            <td class="text-center">{{ loop.index }}</td>
-                            <td>{{ item.product_name or 'Unknown Product' }}</td>
-                            <td class="text-center">{{ item.quantity or 0 }}</td>
-                            <td class="text-end">{{ "%.2f"|format(item.cost_price or 0.0) }}</td>
-                            <td class="text-end">{{ "%.2f"|format(item.line_total or 0.0) }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center text-muted py-4">No items recorded</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr class="table-primary fw-bold">
-                            <th colspan="4" class="text-end">Grand Total</th>
-                            <th class="text-end">KSh {{ "%.2f"|format(total_cost) }}</th>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            <hr class="border-dark">
-
-            <!-- Footer Note -->
-            <div class="text-center mt-5">
-                <p class="lead text-muted mb-4">
-                    Thank you for maintaining accurate stock records.<br>
-                    This receipt confirms goods received into inventory.
-                </p>
-
-                <button class="btn btn-success btn-lg px-5" onclick="window.print()">
-                    <i class="fas fa-print me-2"></i> Print Receipt
-                </button>
-                <a href="/purchases" class="btn btn-outline-secondary btn-lg px-5 ms-3">
-                    <i class="fas fa-arrow-left me-2"></i> Back to Purchases
-                </a>
-            </div>
-        </div>
-
-        <div class="card-footer text-center text-muted small py-3">
-            Powered by StockFlow — Professional Inventory & POS System
         </div>
     </div>
 </div>
@@ -91,13 +92,7 @@
     @media print {
         body * { visibility: hidden; }
         .card, .card * { visibility: visible; }
-        .card { 
-            position: absolute; 
-            left: 0; top: 0; 
-            width: 100%; 
-            box-shadow: none; 
-            border: 1px solid #000;
-        }
+        .card { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: 1px solid #000; }
         .btn { display: none !important; }
     }
 </style>

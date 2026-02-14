@@ -3,68 +3,81 @@
 {% block title %}New Purchase - StockFlow{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">Record New Purchase</h1>
+<div class="container-fluid mt-4 px-3">
+    <h1 class="mb-4">Record New Purchase</h1>
 
-<form id="purchaseForm">
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <label class="form-label fw-bold">Supplier</label>
-            <div class="input-group">
-                <select name="supplier_id" id="supplierSelect" class="form-select" required>
-                    <option value="">Select supplier</option>
-                    {% for supplier in suppliers %}
-                    <option value="{{ supplier._id }}">{{ supplier.name }} ({{ supplier.contact_person or 'No contact' }})</option>
-                    {% endfor %}
-                </select>
-                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-                    <i class="fas fa-plus"></i> New
-                </button>
+    <form id="purchaseForm">
+        <div class="row mb-4">
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold">Supplier</label>
+                <div class="input-group">
+                    <select name="supplier_id" id="supplierSelect" class="form-select" required>
+                        <option value="">Select supplier</option>
+                        {% for supplier in suppliers %}
+                        <option value="{{ supplier._id }}">{{ supplier.name }} ({{ supplier.contact_person or 'No contact' }})</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                        <i class="fas fa-plus"></i> New
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <h5 class="mb-3">Purchase Items</h5>
-    <div id="itemsContainer">
-        <div class="row g-3 mb-3 item-row">
-            <div class="col-md-5">
-                <select name="product_id" class="form-select product-select" required>
-                    <option value="">Select product</option>
-                    {% for product in products %}
-                    <option value="{{ product._id }}" data-price="{{ product.purchase_price }}">
-                        {{ product.name }} (Stock: {{ product.current_quantity }} | Price: KSh {{ "%.2f"|format(product.purchase_price) }})
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <input type="number" name="quantity" class="form-control" placeholder="Quantity" min="1" required>
-            </div>
-            <div class="col-md-3">
-                <input type="number" step="0.01" name="cost_price" class="form-control cost-price" placeholder="Cost Price (KSh)" required>
-            </div>
-            <div class="col-md-1">
-                <button type="button" class="btn btn-danger remove-item"><i class="fas fa-trash"></i></button>
+        <h5 class="mb-3">Purchase Items</h5>
+        <div id="itemsContainer">
+            <div class="card mb-3 item-row">
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-md-5">
+                            <label class="form-label small fw-semibold">Product</label>
+                            <select name="product_id" class="form-select product-select" required>
+                                <option value="">Select product</option>
+                                {% for product in products %}
+                                <option value="{{ product._id }}" data-price="{{ product.purchase_price }}">
+                                    {{ product.name }} (Stock: {{ product.current_quantity }} | KSh {{ "%.2f"|format(product.purchase_price) }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small fw-semibold">Quantity</label>
+                            <input type="number" name="quantity" class="form-control" placeholder="Qty" min="1" required>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small fw-semibold">Cost Price (KSh)</label>
+                            <input type="number" step="0.01" name="cost_price" class="form-control cost-price" placeholder="Cost" required>
+                        </div>
+                        <div class="col-12 col-md-1 text-end text-md-start">
+                            <button type="button" class="btn btn-danger remove-item w-100 w-md-auto">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <button type="button" class="btn btn-secondary mb-3" id="addItem">
-        <i class="fas fa-plus"></i> Add Another Item
-    </button>
+        <button type="button" class="btn btn-secondary mb-4" id="addItem">
+            <i class="fas fa-plus me-1"></i> Add Another Item
+        </button>
 
-    <div class="text-end mb-5">
-        <h4>Total Cost: <span id="totalCost">KSh 0.00</span></h4>
-    </div>
+        <div class="card mb-4 bg-light">
+            <div class="card-body text-end py-3">
+                <h4 class="mb-0">Total Cost: <span id="totalCost" class="text-success">KSh 0.00</span></h4>
+            </div>
+        </div>
 
-    <div class="text-end">
-        <a href="/purchases" class="btn btn-secondary me-2">Cancel</a>
-        <button type="submit" class="btn btn-success btn-lg">Record Purchase</button>
-    </div>
-</form>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
+            <a href="/purchases" class="btn btn-secondary btn-lg">Cancel</a>
+            <button type="submit" class="btn btn-success btn-lg">Record Purchase</button>
+        </div>
+    </form>
+</div>
 
-
+<!-- Add Supplier Modal -->
 <div class="modal fade" id="addSupplierModal">
-    <div class="modal-dialog modal-md">
+    <div class="modal-dialog modal-fullscreen-sm-down">
         <div class="modal-content">
             <form id="supplierForm">
                 <div class="modal-header bg-primary text-white">
@@ -80,17 +93,17 @@
                         <label class="form-label fw-bold">Contact Person</label>
                         <input type="text" name="contact_person" class="form-control">
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
                             <label class="form-label fw-bold">Phone</label>
                             <input type="tel" name="phone" class="form-control">
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-12 col-md-6">
                             <label class="form-label fw-bold">Email</label>
                             <input type="email" name="email" class="form-control">
                         </div>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3 mt-3">
                         <label class="form-label fw-bold">Address</label>
                         <textarea name="address" class="form-control" rows="2"></textarea>
                     </div>
@@ -105,8 +118,7 @@
 </div>
 
 <script>
-
-document.getElementById('addItem').addEventListener('click', function() {
+document.getElementById('addItem').addEventListener('click', function () {
     const container = document.getElementById('itemsContainer');
     const row = container.querySelector('.item-row').cloneNode(true);
     row.querySelectorAll('input, select').forEach(el => el.value = '');
@@ -114,7 +126,7 @@ document.getElementById('addItem').addEventListener('click', function() {
     calculateTotal();
 });
 
-document.getElementById('itemsContainer').addEventListener('click', function(e) {
+document.getElementById('itemsContainer').addEventListener('click', function (e) {
     if (e.target.closest('.remove-item')) {
         if (document.querySelectorAll('.item-row').length > 1) {
             e.target.closest('.item-row').remove();
@@ -122,7 +134,6 @@ document.getElementById('itemsContainer').addEventListener('click', function(e) 
         }
     }
 });
-
 
 document.getElementById('itemsContainer').addEventListener('input', calculateTotal);
 
@@ -136,15 +147,12 @@ function calculateTotal() {
     document.getElementById('totalCost').textContent = 'KSh ' + total.toFixed(2);
 }
 
-
-document.getElementById('purchaseForm').addEventListener('submit', function(e) {
+document.getElementById('purchaseForm').addEventListener('submit', function (e) {
     e.preventDefault();
-    
     const formData = {
         supplier_id: document.querySelector('[name="supplier_id"]').value,
         items: []
     };
-
     document.querySelectorAll('.item-row').forEach(row => {
         formData.items.push({
             product_id: row.querySelector('[name="product_id"]').value,
@@ -152,58 +160,42 @@ document.getElementById('purchaseForm').addEventListener('submit', function(e) {
             cost_price: parseFloat(row.querySelector('[name="cost_price"]').value)
         });
     });
-
     fetch('/purchases/add', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
-        if (data.success && data.redirect) {
-            
-            window.location.href = data.redirect;
-        } else {
-            alert(data.message || 'Purchase recorded!');
-            window.location.href = '/purchases';
-        }
+        window.location.href = (data.success && data.redirect) ? data.redirect : '/purchases';
     })
-    .catch(err => {
-        console.error(err);
-        alert('Error recording purchase. Check console.');
-    });
+    .catch(() => alert('Error recording purchase. Check console.'));
 });
 
-
-document.getElementById('supplierForm').addEventListener('submit', function(e) {
+document.getElementById('supplierForm').addEventListener('submit', function (e) {
     e.preventDefault();
-    const formData = new FormData(this);
-    const data = Object.fromEntries(formData);
-
+    const data = Object.fromEntries(new FormData(this));
     fetch('/suppliers/add', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(result => {
         if (result.success) {
-            alert(result.message);
-            
             const select = document.getElementById('supplierSelect');
             const option = document.createElement('option');
             option.value = result.supplier_id;
             option.textContent = data.name + (data.contact_person ? ' (' + data.contact_person + ')' : '');
             option.selected = true;
             select.appendChild(option);
-            
             bootstrap.Modal.getInstance(document.getElementById('addSupplierModal')).hide();
             this.reset();
         } else {
             alert(result.message || 'Error adding supplier');
         }
     })
-    .catch(err => alert('Error adding supplier'));
+    .catch(() => alert('Error adding supplier'));
 });
 </script>
 {% endblock %}
