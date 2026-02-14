@@ -209,30 +209,30 @@
         </div>
         <div class="offcanvas-body p-0">
             <nav class="nav flex-column pt-2">
-                <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard" data-bs-dismiss="offcanvas">
+                <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard" onclick="sidebarNav(event, this)">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
-                <a class="nav-link {% if request.path.startswith('/products') %}active{% endif %}" href="/products" data-bs-dismiss="offcanvas">
+                <a class="nav-link {% if request.path.startswith('/products') %}active{% endif %}" href="/products" onclick="sidebarNav(event, this)">
                     <i class="fas fa-box"></i> Products
                 </a>
-                <a class="nav-link {% if request.path.startswith('/suppliers') %}active{% endif %}" href="/suppliers" data-bs-dismiss="offcanvas">
+                <a class="nav-link {% if request.path.startswith('/suppliers') %}active{% endif %}" href="/suppliers" onclick="sidebarNav(event, this)">
                     <i class="fas fa-truck"></i> Suppliers
                 </a>
-                <a class="nav-link {% if request.path.startswith('/purchases') %}active{% endif %}" href="/purchases" data-bs-dismiss="offcanvas">
+                <a class="nav-link {% if request.path.startswith('/purchases') %}active{% endif %}" href="/purchases" onclick="sidebarNav(event, this)">
                     <i class="fas fa-shopping-bag"></i> Purchases
                 </a>
-                <a class="nav-link {% if request.path.startswith('/pos') %}active{% endif %}" href="/pos" data-bs-dismiss="offcanvas">
+                <a class="nav-link {% if request.path.startswith('/pos') %}active{% endif %}" href="/pos" onclick="sidebarNav(event, this)">
                     <i class="fas fa-cash-register"></i> POS Sales
                 </a>
 
                 {% if session.role in ['admin', 'super_admin'] %}
-                <a class="nav-link {% if request.path.startswith('/clients') %}active{% endif %}" href="/clients" data-bs-dismiss="offcanvas">
+                <a class="nav-link {% if request.path.startswith('/clients') %}active{% endif %}" href="/clients" onclick="sidebarNav(event, this)">
                     <i class="fas fa-user-friends"></i> Clients
                 </a>
                 {% endif %}
 
                 {% if session.role in ['admin', 'super_admin'] %}
-                <a class="nav-link {% if request.path.startswith('/payments') %}active{% endif %}" href="/payments" data-bs-dismiss="offcanvas">
+                <a class="nav-link {% if request.path.startswith('/payments') %}active{% endif %}" href="/payments" onclick="sidebarNav(event, this)">
                     <i class="fas fa-money-bill-wave"></i> Payments
                 </a>
                 {% endif %}
@@ -240,18 +240,18 @@
                 <hr class="border-light opacity-50 mx-3">
 
                 {% if session.role in ['admin', 'super_admin'] %}
-                <a class="nav-link {% if request.path.startswith('/users') %}active{% endif %}" href="/users" data-bs-dismiss="offcanvas">
+                <a class="nav-link {% if request.path.startswith('/users') %}active{% endif %}" href="/users" onclick="sidebarNav(event, this)">
                     <i class="fas fa-users"></i> Users
                 </a>
                 {% endif %}
 
                 {% if session.role == 'super_admin' %}
-                <a class="nav-link {% if request.path.startswith('/businesses') %}active{% endif %}" href="{{ url_for('businesses') }}" data-bs-dismiss="offcanvas">
+                <a class="nav-link {% if request.path.startswith('/businesses') %}active{% endif %}" href="{{ url_for('businesses') }}" onclick="sidebarNav(event, this)">
                     <i class="fas fa-building"></i> Businesses
                 </a>
                 {% endif %}
 
-                <a class="nav-link" href="/logout">
+                <a class="nav-link" href="/logout" onclick="sidebarNav(event, this)">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </a>
             </nav>
@@ -337,6 +337,29 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Close offcanvas first, then navigate — prevents Bootstrap dismiss
+        // from swallowing the tap on mobile before the href fires.
+        function sidebarNav(event, link) {
+            event.preventDefault();
+            var dest = link.getAttribute('href');
+            var offcanvasEl = document.getElementById('mobileSidebar');
+            var instance = bootstrap.Offcanvas.getInstance(offcanvasEl);
+            if (instance && offcanvasEl.classList.contains('show')) {
+                // Wait for the offcanvas hide animation, then navigate
+                offcanvasEl.addEventListener('hidden.bs.offcanvas', function handler() {
+                    offcanvasEl.removeEventListener('hidden.bs.offcanvas', handler);
+                    window.location.href = dest;
+                });
+                instance.hide();
+            } else {
+                // Offcanvas not open (e.g. desktop fallback) — navigate directly
+                window.location.href = dest;
+            }
+        }
+    </script>
+
     {% block scripts %}{% endblock %}
 </body>
 
