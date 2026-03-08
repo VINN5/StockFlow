@@ -15,30 +15,44 @@ def get_business_query():
             return {}
     return {}
 
+def group_by_business(items, db):
+    businesses = {str(b['_id']): b['name'] for b in db.businesses.find()}
+    grouped = {}
+    for item in items:
+        bid = str(item.get('business_id', ''))
+        bname = businesses.get(bid, 'Unassigned')
+        grouped.setdefault(bname, []).append(item)
+    return grouped
+
 @bp.route('/')
 def index():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
+    is_super_admin = session.get('role') == 'super_admin'
     query = get_business_query()
     payments = list(current_app.db.payments.find(query).sort("date", -1))
-    
-    
+
     client_ids = {p['client_id'] for p in payments if 'client_id' in p}
     clients = {}
     if client_ids:
-        clients = {str(c['_id']): c['name'] for c in current_app.db.clients.find({"_id": {"$in": list(client_ids)}})}
-    
+        clients = {str(c['_id']): c['name']
+                   for c in current_app.db.clients.find({"_id": {"$in": list(client_ids)}})}
     for payment in payments:
-        payment['client_name'] = clients.get(str(payment['client_id']), 'Unknown')
-    
-    return render_template('payments.html', payments=payments)
+        payment['client_name'] = clients.get(str(payment.get('client_id', '')), 'Unknown')
+
+    grouped = group_by_business(payments, current_app.db) if is_super_admin else None
+
+    return render_template('payments.html',
+                           payments=payments,
+                           grouped=grouped,
+                           is_super_admin=is_super_admin)
 
 @bp.route('/add', methods=['POST'])
 def add():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     try:
         client_id = ObjectId(request.form['client_id'])
         amount = float(request.form['amount'])
@@ -46,22 +60,20 @@ def add():
     except:
         flash('Invalid input', 'danger')
         return redirect(url_for('payments.index'))
-    
+
     if amount <= 0:
         flash('Amount must be greater than zero', 'danger')
         return redirect(url_for('payments.index'))
-    
-    
+
     result = current_app.db.clients.update_one(
         {"_id": client_id},
         {"$inc": {"balance": -amount}}
     )
-    
+
     if result.modified_count == 0:
         flash('Client not found or no change', 'danger')
         return redirect(url_for('payments.index'))
-    
-    
+
     payment = {
         "client_id": client_id,
         "amount": amount,
@@ -69,12 +81,12 @@ def add():
         "date": datetime.utcnow(),
         "recorded_by": session['username']
     }
-    
+
     if session.get('role') != 'super_admin':
         business_id = session.get('business_id')
         if business_id:
             payment['business_id'] = ObjectId(business_id)
-    
+
     current_app.db.payments.insert_one(payment)
     flash(f'Payment of KSh {amount:.2f} from client recorded!', 'success')
     return redirect(url_for('payments.index'))
@@ -83,7 +95,7 @@ def add():
 def new():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     query = get_business_query()
     clients = list(current_app.db.clients.find(query).sort("name", 1))
     return render_template('payment_new.html', clients=clients)

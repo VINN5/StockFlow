@@ -1,7 +1,5 @@
 {% extends "base.html" %}
-
 {% block title %}Products - StockFlow{% endblock %}
-
 {% block content %}
 <div class="container-fluid mt-4 px-3">
     <h1 class="mb-4">Products</h1>
@@ -11,25 +9,70 @@
             <input type="text" id="searchInput" class="form-control form-control-lg"
                    placeholder="Search by product name..." onkeyup="searchProducts()">
         </div>
+        {% if not is_super_admin %}
         <div class="col-12 col-sm-5 col-md-6 text-sm-end">
             <button class="btn btn-primary btn-lg w-100 w-sm-auto" data-bs-toggle="modal" data-bs-target="#addProductModal">
                 <i class="fas fa-plus me-2"></i>Add New Product
             </button>
         </div>
+        {% endif %}
     </div>
 
+    {% if is_super_admin %}
+    {# ── Super Admin: grouped by business ── #}
+    {% for biz_name, biz_products in grouped.items() %}
+    <div class="mb-5">
+        <div class="d-flex align-items-center mb-3 gap-2">
+            <span class="badge bg-primary fs-6 px-3 py-2">
+                <i class="fas fa-building me-2"></i>{{ biz_name }}
+            </span>
+            <span class="badge bg-secondary">{{ biz_products|length }} product{{ 's' if biz_products|length != 1 }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle table-card-mobile">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Name</th><th>Description</th><th>Unit</th><th>Stock</th>
+                        <th>Min / Max</th><th>Purchase Price</th><th>Selling Price</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in biz_products %}
+                    <tr {% if product.current_quantity < product.min_stock %}class="table-danger"{% endif %}>
+                        <td data-label="Name"><strong>{{ product.name }}</strong></td>
+                        <td data-label="Description">{{ product.description or '—' }}</td>
+                        <td data-label="Unit">{{ product.unit }}</td>
+                        <td data-label="Stock">{{ product.current_quantity }}</td>
+                        <td data-label="Min / Max">{{ product.min_stock }} / {{ product.max_stock or '∞' }}</td>
+                        <td data-label="Purchase Price">KSh {{ "%.2f"|format(product.purchase_price) }}</td>
+                        <td data-label="Selling Price">KSh {{ "%.2f"|format(product.selling_price) }}</td>
+                        <td data-label="Actions">
+                            <a href="/products/edit/{{ product._id }}" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="/products/delete/{{ product._id }}" class="btn btn-sm btn-danger"
+                               onclick="return confirm('Delete {{ product.name }}?')">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">No products found in any business.</div>
+    {% endfor %}
+
+    {% else %}
+    {# ── Branch Admin / Cashier: normal view ── #}
     <div class="table-responsive">
         <table class="table table-hover align-middle table-card-mobile" id="productsTable">
             <thead class="table-dark">
                 <tr>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Unit</th>
-                    <th>Stock</th>
-                    <th>Min / Max</th>
-                    <th>Purchase Price</th>
-                    <th>Selling Price</th>
-                    <th>Actions</th>
+                    <th>Name</th><th>Description</th><th>Unit</th><th>Stock</th>
+                    <th>Min / Max</th><th>Purchase Price</th><th>Selling Price</th><th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -59,14 +102,16 @@
                     <td colspan="8" class="text-center py-5 text-muted">No products yet. Add one!</td>
                 </tr>
                 {% endfor %}
-                <tr id="noResultsRow" style="display: none;">
+                <tr id="noResultsRow" style="display:none">
                     <td colspan="8" class="text-center py-5 text-muted">No products found matching your search.</td>
                 </tr>
             </tbody>
         </table>
     </div>
+    {% endif %}
 </div>
 
+{% if not is_super_admin %}
 <!-- Add Product Modal -->
 <div class="modal fade" id="addProductModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
@@ -108,7 +153,6 @@
                         <div class="col-12 col-md-4">
                             <label class="form-label fw-bold">Opening Stock Qty</label>
                             <input type="number" name="current_quantity" class="form-control" value="0" min="0">
-                            <small class="form-text text-muted">Updates automatically with purchases/sales.</small>
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label fw-bold">Minimum Stock</label>
@@ -128,27 +172,26 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <script>
 function searchProducts() {
-    let input = document.getElementById('searchInput').value.toLowerCase();
-    let table = document.getElementById('productsTable');
-    let rows = table.getElementsByTagName('tr');
+    const input = document.getElementById('searchInput').value.toLowerCase();
+    const table = document.getElementById('productsTable');
+    if (!table) return;
+    const rows = table.getElementsByTagName('tr');
     let visibleCount = 0;
-
     for (let i = 1; i < rows.length; i++) {
-        let row = rows[i];
+        const row = rows[i];
         if (row.id === 'noResultsRow' || row.id === 'emptyRow') continue;
-        let nameCell = row.cells[0].textContent.toLowerCase();
-        if (nameCell.includes(input)) {
-            row.style.display = '';
-            visibleCount++;
-        } else {
-            row.style.display = 'none';
-        }
+        const nameCell = row.cells[0].textContent.toLowerCase();
+        row.style.display = nameCell.includes(input) ? '' : 'none';
+        if (nameCell.includes(input)) visibleCount++;
     }
-    document.getElementById('noResultsRow').style.display = (input && visibleCount === 0) ? '' : 'none';
-    document.getElementById('emptyRow').style.display = (!input && visibleCount === 0) ? '' : 'none';
+    const nr = document.getElementById('noResultsRow');
+    const er = document.getElementById('emptyRow');
+    if (nr) nr.style.display = (input && visibleCount === 0) ? '' : 'none';
+    if (er) er.style.display = (!input && visibleCount === 0) ? '' : 'none';
 }
 </script>
 {% endblock %}

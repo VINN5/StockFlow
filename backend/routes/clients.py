@@ -15,28 +15,44 @@ def get_business_query():
             return {}
     return {}
 
+def group_by_business(items, db):
+    businesses = {str(b['_id']): b['name'] for b in db.businesses.find()}
+    grouped = {}
+    for item in items:
+        bid = str(item.get('business_id', ''))
+        bname = businesses.get(bid, 'Unassigned')
+        grouped.setdefault(bname, []).append(item)
+    return grouped
+
 @bp.route('/')
 def index():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
+    is_super_admin = session.get('role') == 'super_admin'
     query = get_business_query()
     clients = list(current_app.db.clients.find(query).sort("name", 1))
-    return render_template('clients.html', clients=clients)
+
+    grouped = group_by_business(clients, current_app.db) if is_super_admin else None
+
+    return render_template('clients.html',
+                           clients=clients,
+                           grouped=grouped,
+                           is_super_admin=is_super_admin)
 
 @bp.route('/add', methods=['POST'])
 def add():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     name = request.form['name'].strip()
     contact = request.form.get('contact', '').strip()
     kra_pin = request.form.get('kra_pin', '').strip()
-    
+
     if not name:
         flash('Client name is required', 'danger')
         return redirect(url_for('clients.index'))
-    
+
     client_data = {
         "name": name,
         "contact": contact,
@@ -44,12 +60,12 @@ def add():
         "balance": 0.0,
         "created_at": datetime.utcnow()
     }
-    
+
     if session.get('role') != 'super_admin':
         business_id = session.get('business_id')
         if business_id:
             client_data['business_id'] = ObjectId(business_id)
-    
+
     current_app.db.clients.insert_one(client_data)
     flash('Client added successfully!', 'success')
     return redirect(url_for('clients.index'))

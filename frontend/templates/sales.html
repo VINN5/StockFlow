@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Sales - StockFlow{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4 px-3">
+    <h1 class="mb-4">Sales History</h1>
+
+    {% if is_super_admin %}
+    {% for biz_name, biz_sales in grouped.items() %}
+    <div class="mb-5">
+        <div class="d-flex align-items-center mb-3 gap-2">
+            <span class="badge bg-primary fs-6 px-3 py-2">
+                <i class="fas fa-building me-2"></i>{{ biz_name }}
+            </span>
+            <span class="badge bg-secondary">{{ biz_sales|length }} sale{{ 's' if biz_sales|length != 1 }}</span>
+            <span class="badge bg-success">
+                KSh {{ "%.2f"|format(biz_sales|sum(attribute='total_amount')) }} total
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle table-card-mobile">
+                <thead class="table-dark">
+                    <tr><th>Date</th><th>Cashier</th><th>Items</th><th>Total</th><th>Payment</th></tr>
+                </thead>
+                <tbody>
+                    {% for sale in biz_sales %}
+                    <tr>
+                        <td data-label="Date">
+                            {% if sale.date %}{{ sale.date.strftime('%Y-%m-%d %H:%M') }}{% else %}Unknown{% endif %}
+                        </td>
+                        <td data-label="Cashier">{{ sale.cashier_name or '—' }}</td>
+                        <td data-label="Items">
+                            <ul class="mb-0 ps-3 small">
+                                {% for item in sale.items %}
+                                <li>{{ item.quantity }} × {{ item.product_name }} @ KSh {{ "%.2f"|format(item.selling_price) }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td data-label="Total"><strong>KSh {{ "%.2f"|format(sale.total_amount) }}</strong></td>
+                        <td data-label="Payment">
+                            <span class="badge bg-{{ 'success' if sale.payment_method == 'cash' else 'warning text-dark' if sale.payment_method == 'credit' else 'info' }}">
+                                {{ sale.payment_method|capitalize }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">No sales found in any business.</div>
+    {% endfor %}
+
+    {% else %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle table-card-mobile">
+            <thead class="table-dark">
+                <tr><th>Date</th><th>Cashier</th><th>Items</th><th>Total</th><th>Payment</th></tr>
+            </thead>
+            <tbody>
+                {% for sale in sales %}
+                <tr>
+                    <td data-label="Date">
+                        {% if sale.date %}{{ sale.date.strftime('%Y-%m-%d %H:%M') }}{% else %}Unknown{% endif %}
+                    </td>
+                    <td data-label="Cashier">{{ sale.cashier_name or '—' }}</td>
+                    <td data-label="Items">
+                        <ul class="mb-0 ps-3 small">
+                            {% for item in sale.items %}
+                            <li>{{ item.quantity }} × {{ item.product_name }} @ KSh {{ "%.2f"|format(item.selling_price) }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                    <td data-label="Total"><strong>KSh {{ "%.2f"|format(sale.total_amount) }}</strong></td>
+                    <td data-label="Payment">
+                        <span class="badge bg-{{ 'success' if sale.payment_method == 'cash' else 'warning text-dark' if sale.payment_method == 'credit' else 'info' }}">
+                            {{ sale.payment_method|capitalize }}
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">No sales recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

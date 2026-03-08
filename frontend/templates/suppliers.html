@@ -1,7 +1,5 @@
 {% extends "base.html" %}
-
 {% block title %}Suppliers - StockFlow{% endblock %}
-
 {% block content %}
 <div class="container-fluid mt-4 px-3">
     <h1 class="mb-4">Suppliers</h1>
@@ -11,23 +9,66 @@
             <input type="text" id="searchInput" class="form-control form-control-lg"
                    placeholder="Search by supplier name..." onkeyup="searchSuppliers()">
         </div>
+        {% if not is_super_admin %}
         <div class="col-12 col-sm-5 col-md-6 text-sm-end">
             <button class="btn btn-primary btn-lg w-100 w-sm-auto" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
                 <i class="fas fa-plus me-2"></i>Add New Supplier
             </button>
         </div>
+        {% endif %}
     </div>
 
+    {% if is_super_admin %}
+    {% for biz_name, biz_suppliers in grouped.items() %}
+    <div class="mb-5">
+        <div class="d-flex align-items-center mb-3 gap-2">
+            <span class="badge bg-primary fs-6 px-3 py-2">
+                <i class="fas fa-building me-2"></i>{{ biz_name }}
+            </span>
+            <span class="badge bg-secondary">{{ biz_suppliers|length }} supplier{{ 's' if biz_suppliers|length != 1 }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle table-card-mobile">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Supplier Name</th><th>Contact Person</th><th>Phone</th>
+                        <th>Email</th><th>Address</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for supplier in biz_suppliers %}
+                    <tr>
+                        <td data-label="Name"><strong>{{ supplier.name }}</strong></td>
+                        <td data-label="Contact">{{ supplier.contact_person or '—' }}</td>
+                        <td data-label="Phone">{{ supplier.phone or '—' }}</td>
+                        <td data-label="Email">{{ supplier.email or '—' }}</td>
+                        <td data-label="Address">{{ supplier.address or '—' }}</td>
+                        <td data-label="Actions">
+                            <a href="/suppliers/edit/{{ supplier._id }}" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="/suppliers/delete/{{ supplier._id }}" class="btn btn-sm btn-danger"
+                               onclick="return confirm('Delete {{ supplier.name }}?')">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">No suppliers found in any business.</div>
+    {% endfor %}
+
+    {% else %}
     <div class="table-responsive">
         <table class="table table-hover align-middle table-card-mobile" id="suppliersTable">
             <thead class="table-dark">
                 <tr>
-                    <th>Supplier Name</th>
-                    <th>Contact Person</th>
-                    <th>Phone</th>
-                    <th>Email</th>
-                    <th>Address</th>
-                    <th>Actions</th>
+                    <th>Supplier Name</th><th>Contact Person</th><th>Phone</th>
+                    <th>Email</th><th>Address</th><th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -53,15 +94,16 @@
                     <td colspan="6" class="text-center py-5 text-muted">No suppliers yet. Add one!</td>
                 </tr>
                 {% endfor %}
-                <tr id="noResultsRow" style="display: none;">
+                <tr id="noResultsRow" style="display:none">
                     <td colspan="6" class="text-center py-5 text-muted">No suppliers found matching your search.</td>
                 </tr>
             </tbody>
         </table>
     </div>
+    {% endif %}
 </div>
 
-<!-- Add Supplier Modal -->
+{% if not is_super_admin %}
 <div class="modal fade" id="addSupplierModal">
     <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
@@ -102,27 +144,26 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <script>
 function searchSuppliers() {
-    let input = document.getElementById('searchInput').value.toLowerCase();
-    let table = document.getElementById('suppliersTable');
-    let rows = table.getElementsByTagName('tr');
+    const input = document.getElementById('searchInput').value.toLowerCase();
+    const table = document.getElementById('suppliersTable');
+    if (!table) return;
+    const rows = table.getElementsByTagName('tr');
     let visibleCount = 0;
-
     for (let i = 1; i < rows.length; i++) {
-        let row = rows[i];  // ← bug fix: was missing "let row ="
+        const row = rows[i];
         if (row.id === 'noResultsRow' || row.id === 'emptyRow') continue;
-        let nameCell = row.cells[0].textContent.toLowerCase();
-        if (nameCell.includes(input)) {
-            row.style.display = '';
-            visibleCount++;
-        } else {
-            row.style.display = 'none';
-        }
+        const nameCell = row.cells[0].textContent.toLowerCase();
+        row.style.display = nameCell.includes(input) ? '' : 'none';
+        if (nameCell.includes(input)) visibleCount++;
     }
-    document.getElementById('noResultsRow').style.display = (input && visibleCount === 0) ? '' : 'none';
-    document.getElementById('emptyRow').style.display = (!input && visibleCount === 0) ? '' : 'none';
+    const nr = document.getElementById('noResultsRow');
+    const er = document.getElementById('emptyRow');
+    if (nr) nr.style.display = (input && visibleCount === 0) ? '' : 'none';
+    if (er) er.style.display = (!input && visibleCount === 0) ? '' : 'none';
 }
 </script>
 {% endblock %}
