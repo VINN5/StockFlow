@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Request Payment - {{ client.name }}{% endblock %}
+{% block content %}
+<style>
+  .pr-card { background:#fff; border-radius:14px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06); padding:1.5rem; margin-bottom:1rem; }
+  .pr-balance { font-size:2rem; font-weight:800; color:#dc2626; line-height:1; }
+  .pr-section-title { font-size:.7rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:#6b7280; margin:0 0 .75rem; }
+  .pr-method-btn { width:100%; padding:.85rem 1rem; border-radius:12px; border:2px solid #e5e7eb; background:#fff; font-weight:600; font-size:.9rem; display:flex; align-items:center; gap:.75rem; cursor:pointer; transition:all .15s; text-align:left; }
+  .pr-method-btn:hover:not(:disabled) { border-color:#2563eb; background:#eff6ff; }
+  .pr-method-btn:disabled { opacity:.45; cursor:not-allowed; }
+  .pr-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+  .pr-wa  .pr-icon { background:#dcfce7; color:#16a34a; }
+  .pr-sms .pr-icon { background:#eff6ff; color:#2563eb; }
+  .pr-stk .pr-icon { background:#fef9c3; color:#ca8a04; }
+  .sale-row { display:flex; justify-content:space-between; align-items:flex-start; padding:.65rem 0; border-bottom:1px solid #f3f4f6; font-size:.85rem; }
+  .sale-row:last-child { border-bottom:none; }
+  .sale-items { font-size:.75rem; color:#6b7280; margin-top:.2rem; }
+  .pr-result { display:none; padding:.7rem 1rem; border-radius:10px; margin-top:.65rem; font-size:.875rem; font-weight:500; }
+  .pr-result.success { background:#dcfce7; color:#166534; display:block; }
+  .pr-result.error   { background:#fee2e2; color:#991b1b; display:block; }
+  .pr-amount-input { border:2px solid #e5e7eb; border-radius:10px; padding:.6rem 1rem; font-size:1rem; font-weight:600; width:100%; margin-bottom:.75rem; transition:border-color .15s; }
+  .pr-amount-input:focus { outline:none; border-color:#2563eb; }
+</style>
+
+<div class="container-fluid mt-4 px-3" style="max-width:660px;">
+
+  <!-- Back + title -->
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <a href="{{ url_for('clients.index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+    <h1 class="mb-0" style="font-size:1.2rem;font-weight:700;">Request Payment</h1>
+  </div>
+
+  <!-- Client summary -->
+  <div class="pr-card">
+    <p class="pr-section-title">Client Details</p>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div>
+        <div style="font-size:1.15rem;font-weight:700;">{{ client.name }}</div>
+        <div style="color:#6b7280;font-size:.875rem;margin-top:.25rem;">
+          {% if client.contact %}
+            <i class="fas fa-phone me-1"></i>{{ client.contact }}
+          {% else %}
+            <span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>No phone number saved</span>
+          {% endif %}
+        </div>
+        {% if client.kra_pin %}
+        <div style="color:#9ca3af;font-size:.78rem;margin-top:.15rem;">KRA: {{ client.kra_pin }}</div>
+        {% endif %}
+      </div>
+      <div class="text-end">
+        <div style="font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Outstanding Balance</div>
+        <div class="pr-balance">KSh {{ "%.2f"|format(client.balance) }}</div>
+      </div>
+    </div>
+    <hr class="my-3">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <label style="font-size:.82rem;font-weight:600;white-space:nowrap;margin:0;">Due Date:</label>
+      <input type="date" id="dueDateInput" class="form-control form-control-sm" style="max-width:180px;">
+    </div>
+  </div>
+
+  <!-- Credit sales breakdown -->
+  {% if credit_sales %}
+  <div class="pr-card">
+    <p class="pr-section-title">Credit Sales Breakdown</p>
+    {% for sale in credit_sales %}
+    <div class="sale-row">
+      <div>
+        <div style="font-weight:600;">{{ sale.date.strftime('%d %b %Y') if sale.date else 'Unknown date' }}</div>
+        <div class="sale-items">
+          {% for item in sale.enriched_items %}
+          {{ item.quantity }} × {{ item.product_name }} @ KSh {{ "%.2f"|format(item.selling_price) }}<br>
+          {% endfor %}
+        </div>
+      </div>
+      <div style="font-weight:700;color:#dc2626;white-space:nowrap;">KSh {{ "%.2f"|format(sale.total_amount) }}</div>
+    </div>
+    {% endfor %}
+    <div class="d-flex justify-content-between mt-2 pt-2" style="border-top:2px solid #e5e7eb;font-weight:700;">
+      <span>Total Outstanding</span>
+      <span style="color:#dc2626;">KSh {{ "%.2f"|format(client.balance) }}</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Send options -->
+  <p class="pr-section-title mt-3">Send Payment Request Via</p>
+
+  <!-- WhatsApp -->
+  <div class="pr-card" style="padding:1rem;">
+    {% if wa_link %}
+    <a href="{{ wa_link }}" target="_blank" id="waLink"
+       class="pr-method-btn pr-wa" style="text-decoration:none;color:inherit;">
+      <div class="pr-icon"><i class="fab fa-whatsapp"></i></div>
+      <div>
+        <div>Send via WhatsApp</div>
+        <div style="font-size:.75rem;color:#6b7280;font-weight:400;">Opens WhatsApp with pre-filled message</div>
+      </div>
+      <i class="fas fa-external-link-alt ms-auto" style="font-size:.7rem;opacity:.35;"></i>
+    </a>
+    {% else %}
+    <div class="pr-method-btn pr-wa" style="opacity:.45;cursor:not-allowed;">
+      <div class="pr-icon"><i class="fab fa-whatsapp"></i></div>
+      <div>
+        <div>Send via WhatsApp</div>
+        <div style="font-size:.75rem;color:#6b7280;font-weight:400;">Client has no phone number</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- SMS -->
+  <div class="pr-card" style="padding:1rem;">
+    <button class="pr-method-btn pr-sms" id="smsBtn"
+            {% if not client.contact %}disabled{% endif %}>
+      <div class="pr-icon"><i class="fas fa-sms"></i></div>
+      <div>
+        <div>
+          Send SMS Reminder
+          <span id="smsSpinner" style="display:none;"><i class="fas fa-spinner fa-spin ms-1"></i></span>
+        </div>
+        <div style="font-size:.75rem;color:#6b7280;font-weight:400;">
+          {% if client.contact %}Sends to {{ client.contact }}{% else %}Client has no phone number{% endif %}
+        </div>
+      </div>
+    </button>
+    <div class="pr-result" id="smsResult"></div>
+  </div>
+
+  <!-- STK Push -->
+  <div class="pr-card" style="padding:1rem;">
+    <p class="pr-section-title" style="margin-bottom:.6rem;">M-Pesa STK Push</p>
+    <input type="number" class="pr-amount-input" id="stkAmount"
+           value="{{ client.balance|round(0,'floor')|int }}"
+           min="1" step="1" placeholder="Amount (KSh)"
+           {% if not client.contact %}disabled{% endif %}>
+    <button class="pr-method-btn pr-stk" id="stkBtn"
+            {% if not client.contact %}disabled{% endif %}>
+      <div class="pr-icon"><i class="fas fa-mobile-alt"></i></div>
+      <div>
+        <div>
+          Send STK Push
+          <span id="stkSpinner" style="display:none;"><i class="fas fa-spinner fa-spin ms-1"></i></span>
+        </div>
+        <div style="font-size:.75rem;color:#6b7280;font-weight:400;">
+          {% if client.contact %}Prompts {{ client.contact }} on M-Pesa{% else %}Client has no phone number{% endif %}
+        </div>
+      </div>
+    </button>
+    <div class="pr-result" id="stkResult"></div>
+  </div>
+
+</div>
+
+<script>
+  const clientId = "{{ client._id }}";
+
+  // Set default due date to 7 days from today
+  const due = new Date();
+  due.setDate(due.getDate() + 7);
+  document.getElementById('dueDateInput').value = due.toISOString().split('T')[0];
+
+  function getDueDate() {
+    const raw = document.getElementById('dueDateInput').value;
+    if (!raw) return '{{ due_date }}';
+    const d = new Date(raw);
+    return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+  }
+
+  function showResult(elId, success, message) {
+    const el = document.getElementById(elId);
+    el.className = 'pr-result ' + (success ? 'success' : 'error');
+    el.textContent = (success ? '✓ ' : '✗ ') + message;
+  }
+
+  function setLoading(btnId, spinnerId, loading) {
+    document.getElementById(btnId).disabled = loading;
+    document.getElementById(spinnerId).style.display = loading ? 'inline' : 'none';
+  }
+
+  // SMS
+  document.getElementById('smsBtn')?.addEventListener('click', async () => {
+    setLoading('smsBtn', 'smsSpinner', true);
+    try {
+      const resp = await fetch(`/payments/request/${clientId}/sms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ due_date: getDueDate() })
+      });
+      const data = await resp.json();
+      showResult('smsResult', data.success, data.message);
+    } catch (e) {
+      showResult('smsResult', false, 'Network error. Please try again.');
+    } finally {
+      setLoading('smsBtn', 'smsSpinner', false);
+    }
+  });
+
+  // STK Push
+  document.getElementById('stkBtn')?.addEventListener('click', async () => {
+    const amount = parseFloat(document.getElementById('stkAmount').value);
+    if (!amount || amount <= 0) {
+      showResult('stkResult', false, 'Please enter a valid amount.');
+      return;
+    }
+    setLoading('stkBtn', 'stkSpinner', true);
+    try {
+      const resp = await fetch(`/payments/request/${clientId}/stk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount })
+      });
+      const data = await resp.json();
+      showResult('stkResult', data.success, data.message);
+    } catch (e) {
+      showResult('stkResult', false, 'Network error. Please try again.');
+    } finally {
+      setLoading('stkBtn', 'stkSpinner', false);
+    }
+  });
+</script>
+{% endblock %}

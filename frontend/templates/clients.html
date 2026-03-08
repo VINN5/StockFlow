@@ -31,7 +31,8 @@
                     <div class="col-12 col-md-3">
                         <label class="form-label">KRA PIN</label>
                         <input type="text" name="kra_pin" class="form-control" placeholder="e.g., A00123456B"
-                               pattern="[AP][0-9]{9}[A-Z]" title="KRA PIN format: A or P + 9 digits + letter">
+                               pattern="[AP][0-9]{9}[A-Z]"
+                               title="KRA PIN format: A or P + 9 digits + letter">
                         <small class="form-text text-muted">Optional</small>
                     </div>
                     <div class="col-12 col-md-2 d-flex align-items-end">
@@ -55,7 +56,7 @@
         <div class="table-responsive">
             <table class="table table-striped table-card-mobile">
                 <thead class="table-dark">
-                    <tr><th>Name</th><th>Contact</th><th>KRA PIN</th><th>Balance (Credit Owed)</th></tr>
+                    <tr><th>Name</th><th>Contact</th><th>KRA PIN</th><th>Balance</th></tr>
                 </thead>
                 <tbody>
                     {% for client in biz_clients %}
@@ -87,7 +88,13 @@
     <div class="table-responsive">
         <table class="table table-striped table-card-mobile">
             <thead class="table-dark">
-                <tr><th>Name</th><th>Contact</th><th>KRA PIN</th><th>Balance (Credit Owed)</th></tr>
+                <tr>
+                    <th>Name</th>
+                    <th>Contact</th>
+                    <th>KRA PIN</th>
+                    <th>Balance (Credit Owed)</th>
+                    {% if session.role == 'admin' %}<th>Actions</th>{% endif %}
+                </tr>
             </thead>
             <tbody>
                 {% for client in clients %}
@@ -104,10 +111,23 @@
                         <span class="badge bg-secondary">KSh 0.00</span>
                         {% endif %}
                     </td>
+                    {% if session.role == 'admin' %}
+                    <td data-label="Actions">
+                        {% if client.balance > 0 %}
+                        <a href="{{ url_for('payments.request_payment', client_id=client._id) }}"
+                           class="btn btn-sm btn-warning">
+                            <i class="fas fa-bell me-1"></i>Request Payment
+                        </a>
+                        {% else %}
+                        <span class="text-muted small">No balance</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4" class="text-center text-muted">No clients yet. Add one above!</td>
+                    <td colspan="{{ 5 if session.role == 'admin' else 4 }}"
+                        class="text-center text-muted">No clients yet. Add one above!</td>
                 </tr>
                 {% endfor %}
             </tbody>
