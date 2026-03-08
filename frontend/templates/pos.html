@@ -76,7 +76,7 @@
             {% endif %}
           </div>
 
-          <!-- Payment method — ALL OPTIONS ALWAYS VISIBLE -->
+          <!-- Payment method -->
           <div class="mb-3">
             <label class="form-label fw-bold small mb-1">Payment Method</label>
             <select class="form-select form-select-sm" id="paymentMethod">
@@ -92,7 +92,7 @@
 
           <hr class="my-2">
 
-          <!-- Cart items -->
+          <!-- Cart items container — empty message is INSIDE and never moved -->
           <div id="cartItems">
             <p class="text-center text-muted small py-3" id="emptyMsg">
               <i class="fas fa-shopping-basket me-1"></i>Cart is empty — tap a product to add it
@@ -132,17 +132,21 @@ function searchProducts() {
 document.querySelectorAll('.add-to-cart').forEach(btn => {
   btn.addEventListener('click', function () {
     if (this.disabled) return;
-    const id    = this.dataset.id;
+
+    const id    = String(this.dataset.id);   // ensure string comparison
     const name  = this.dataset.name;
     const price = parseFloat(this.dataset.price);
     const stock = parseInt(this.dataset.stock);
-    const existing = cart.find(i => i.id === id);
-    if (existing) {
-      if (existing.quantity >= stock) {
+
+    // Find by string id to avoid ObjectId reference mismatch
+    const existingIndex = cart.findIndex(i => i.id === id);
+
+    if (existingIndex > -1) {
+      if (cart[existingIndex].quantity >= stock) {
         showToast(`Only ${stock} units of "${name}" in stock`, 'warning');
         return;
       }
-      existing.quantity += 1;
+      cart[existingIndex].quantity += 1;
     } else {
       cart.push({ id, name, price, quantity: 1, stock });
     }
@@ -153,24 +157,33 @@ document.querySelectorAll('.add-to-cart').forEach(btn => {
 // ── Render cart ─────────────────────────────────────────────
 function renderCart() {
   const container = document.getElementById('cartItems');
-  const emptyMsg  = document.getElementById('emptyMsg');
-  container.innerHTML = '';
+
+  // ALWAYS clear only the cart-item divs, never touch #emptyMsg via innerHTML
+  // Remove all cart-item elements manually
+  container.querySelectorAll('.cart-item').forEach(el => el.remove());
+
+  const emptyMsg   = document.getElementById('emptyMsg');
+  const cartTotal  = document.getElementById('cartTotal');
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  const cartCount  = document.getElementById('cartCount');
 
   if (cart.length === 0) {
-    container.appendChild(emptyMsg);
-    emptyMsg.style.display = '';
-    document.getElementById('cartTotal').textContent   = 'KSh 0.00';
-    document.getElementById('checkoutBtn').disabled    = true;
-    document.getElementById('cartCount').style.display = 'none';
+    emptyMsg.style.display  = '';
+    cartTotal.textContent   = 'KSh 0.00';
+    checkoutBtn.disabled    = true;
+    cartCount.style.display = 'none';
     return;
   }
 
+  // Hide empty message
   emptyMsg.style.display = 'none';
+
   let total = 0;
 
   cart.forEach((item, i) => {
     const lineTotal = item.quantity * item.price;
     total += lineTotal;
+
     const div = document.createElement('div');
     div.className = 'cart-item';
     div.innerHTML = `
@@ -192,14 +205,15 @@ function renderCart() {
           </button>
         </div>
       </div>`;
-    container.appendChild(div);
+
+    // Insert before the emptyMsg so order is preserved
+    container.insertBefore(div, emptyMsg);
   });
 
-  document.getElementById('cartTotal').textContent = 'KSh ' + total.toFixed(2);
-  document.getElementById('checkoutBtn').disabled  = false;
-  const badge       = document.getElementById('cartCount');
-  badge.textContent = cart.reduce((s, i) => s + i.quantity, 0);
-  badge.style.display = '';
+  cartTotal.textContent   = 'KSh ' + total.toFixed(2);
+  checkoutBtn.disabled    = false;
+  cartCount.textContent   = cart.reduce((s, i) => s + i.quantity, 0);
+  cartCount.style.display = '';
 }
 
 // ── Cart interactions ────────────────────────────────────────
@@ -207,6 +221,7 @@ document.getElementById('cartItems').addEventListener('click', function (e) {
   const dec = e.target.closest('.qty-dec');
   const inc = e.target.closest('.qty-inc');
   const rem = e.target.closest('.remove-item');
+
   if (dec) {
     const i = parseInt(dec.dataset.i);
     cart[i].quantity -= 1;
@@ -226,14 +241,13 @@ document.getElementById('cartItems').addEventListener('click', function (e) {
   }
 });
 
-// ── Show credit warning if credit selected but no client ─────
+// ── Credit warning ───────────────────────────────────────────
 document.getElementById('paymentMethod').addEventListener('change', function () {
   const warn = document.getElementById('creditWarning');
   const hasClient = document.getElementById('clientSelect').value !== '';
   warn.style.display = (this.value === 'credit' && !hasClient) ? 'block' : 'none';
 });
 
-// ── Hide credit warning when client is selected ──────────────
 document.getElementById('clientSelect').addEventListener('change', function () {
   if (this.value !== '') {
     document.getElementById('creditWarning').style.display = 'none';
