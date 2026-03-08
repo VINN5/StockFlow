@@ -1,244 +1,300 @@
 {% extends "base.html" %}
-
 {% block title %}POS Sales - StockFlow{% endblock %}
-
 {% block content %}
+
+<style>
+  .product-card .card { transition: transform 0.15s, box-shadow 0.15s; }
+  .product-card .card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.13) !important; }
+  #cartItems { max-height: 340px; overflow-y: auto; }
+  .cart-item { background: #f8f9fa; border-radius: 10px; padding: .6rem .75rem; margin-bottom: .5rem; }
+  .qty-box { display: flex; align-items: center; gap: 4px; }
+  .qty-box button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #dee2e6; background: #fff; font-size: 1rem; line-height: 1; padding: 0; cursor: pointer; }
+  .qty-box button:hover { background: #e9ecef; }
+  .qty-box span { min-width: 28px; text-align: center; font-weight: 700; font-size: .9rem; }
+  #creditWarning { display:none; background:#fef9c3; border:1px solid #fcd34d; border-radius:8px; padding:.5rem .75rem; font-size:.8rem; color:#92400e; margin-top:.4rem; }
+</style>
+
 <div class="container-fluid mt-3 px-3">
-    <h1 class="mb-3">Point of Sale</h1>
+  <h1 class="mb-3">Point of Sale</h1>
 
-    <div class="row g-3">
-        <!-- Product grid -->
-        <div class="col-12 col-lg-8 order-2 order-lg-1">
-            <input type="text" id="searchInput" class="form-control form-control-lg mb-3"
-                   placeholder="Search products..." onkeyup="searchProducts()">
+  <div class="row g-3">
 
-            <div class="row g-2" id="productsGrid">
-                {% for product in products %}
-                <div class="col-6 col-sm-4 col-md-4 product-card" data-name="{{ product.name|lower }}">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body text-center p-2">
-                            <h6 class="card-title mb-1">{{ product.name }}</h6>
-                            <p class="card-text mb-2 small text-muted">
-                                Stock: <strong>{{ product.current_quantity }}</strong><br>
-                                <strong class="text-success">KSh {{ "%.2f"|format(product.selling_price) }}</strong>
-                            </p>
-                            <button class="btn btn-primary btn-sm w-100 add-to-cart"
-                                    data-id="{{ product._id }}"
-                                    data-name="{{ product.name }}"
-                                    data-price="{{ product.selling_price }}"
-                                    {% if product.current_quantity <= 0 %}disabled{% endif %}>
-                                <i class="fas fa-cart-plus"></i> Add
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
+    <!-- ── Product grid ── -->
+    <div class="col-12 col-lg-8 order-2 order-lg-1">
+      <input type="text" id="searchInput" class="form-control form-control-lg mb-3"
+             placeholder="🔍  Search products..." oninput="searchProducts()">
+
+      <div class="row g-2" id="productsGrid">
+        {% for product in products %}
+        <div class="col-6 col-sm-4 col-md-4 product-card" data-name="{{ product.name|lower }}">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body text-center p-2">
+              <h6 class="card-title mb-1" style="font-size:.88rem;">{{ product.name }}</h6>
+              <p class="card-text mb-2" style="font-size:.8rem;color:#6b7280;">
+                Stock: <strong>{{ product.current_quantity }}</strong><br>
+                <strong class="text-success" style="font-size:.95rem;">KSh {{ "%.2f"|format(product.selling_price) }}</strong>
+              </p>
+              <button class="btn btn-primary btn-sm w-100 add-to-cart"
+                      data-id="{{ product._id }}"
+                      data-name="{{ product.name }}"
+                      data-price="{{ product.selling_price }}"
+                      data-stock="{{ product.current_quantity }}"
+                      {% if product.current_quantity <= 0 %}disabled{% endif %}>
+                <i class="fas fa-cart-plus"></i> Add
+              </button>
             </div>
+          </div>
         </div>
-
-        <!-- Cart -->
-        <div class="col-12 col-lg-4 order-1 order-lg-2">
-            <div class="card shadow sticky-top" style="top: 70px;">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Cart</h5>
-                </div>
-                <div class="card-body p-3">
-                    <!-- Client -->
-                    <div class="mb-3">
-                        <label for="clientSelect" class="form-label fw-bold small">Client (Optional)</label>
-                        <select class="form-select form-select-sm" id="clientSelect">
-                            <option value="">Cash Sale - No Client</option>
-                            {% for client in clients %}
-                            <option value="{{ client._id }}">{{ client.name }}{% if client.contact %} ({{ client.contact }}){% endif %}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <!-- Payment method -->
-                    <div class="mb-3">
-                        <label for="paymentMethod" class="form-label fw-bold small">Payment Method</label>
-                        <select class="form-select form-select-sm" id="paymentMethod">
-                            <option value="cash">Cash</option>
-                            <option value="mpesa">M-Pesa</option>
-                            <option value="credit" id="creditOption" style="display:none;">
-                                Credit (Add to Client Balance)
-                            </option>
-                        </select>
-                        <small id="creditHint" class="text-muted" style="display:none;">
-                            <i class="fas fa-info-circle me-1"></i>Select a client to enable credit payments
-                        </small>
-                    </div>
-
-                    <hr class="my-2">
-                    <div id="cartItems"></div>
-                    <hr class="my-2">
-                    <h5 class="text-end mb-0">Total: <span id="cartTotal" class="text-success">KSh 0.00</span></h5>
-                </div>
-                <div class="card-footer p-2">
-                    <button class="btn btn-success btn-lg w-100" id="checkoutBtn" disabled>
-                        <i class="fas fa-cash-register me-2"></i>Checkout
-                    </button>
-                </div>
-            </div>
-        </div>
+        {% endfor %}
+      </div>
     </div>
+
+    <!-- ── Cart ── -->
+    <div class="col-12 col-lg-4 order-1 order-lg-2">
+      <div class="card shadow sticky-top" style="top:70px;">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-shopping-cart me-2"></i>Cart
+            <span id="cartCount" class="badge bg-white text-success ms-2" style="display:none;">0</span>
+          </h5>
+        </div>
+        <div class="card-body p-3">
+
+          <!-- Client -->
+          <div class="mb-2">
+            <label class="form-label fw-bold small mb-1">Client <span class="text-muted fw-normal">(Optional)</span></label>
+            <select class="form-select form-select-sm" id="clientSelect">
+              <option value="">-- Cash Sale, No Client --</option>
+              {% for client in clients %}
+              <option value="{{ client._id }}">{{ client.name }}{% if client.contact %} · {{ client.contact }}{% endif %}</option>
+              {% endfor %}
+            </select>
+            {% if not clients %}
+            <small class="text-warning d-block mt-1">
+              <i class="fas fa-exclamation-triangle me-1"></i>No clients yet — add clients to enable credit sales.
+            </small>
+            {% endif %}
+          </div>
+
+          <!-- Payment method — ALL OPTIONS ALWAYS VISIBLE -->
+          <div class="mb-3">
+            <label class="form-label fw-bold small mb-1">Payment Method</label>
+            <select class="form-select form-select-sm" id="paymentMethod">
+              <option value="cash">💵 Cash</option>
+              <option value="mpesa">📱 M-Pesa</option>
+              <option value="credit">📒 Credit (Client Balance)</option>
+            </select>
+            <div id="creditWarning">
+              <i class="fas fa-exclamation-circle me-1"></i>
+              You must select a client above to use Credit payment.
+            </div>
+          </div>
+
+          <hr class="my-2">
+
+          <!-- Cart items -->
+          <div id="cartItems">
+            <p class="text-center text-muted small py-3" id="emptyMsg">
+              <i class="fas fa-shopping-basket me-1"></i>Cart is empty — tap a product to add it
+            </p>
+          </div>
+
+          <hr class="my-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-bold">Total</span>
+            <h5 class="mb-0 text-success fw-bold" id="cartTotal">KSh 0.00</h5>
+          </div>
+        </div>
+
+        <div class="card-footer p-2">
+          <button class="btn btn-success btn-lg w-100" id="checkoutBtn" disabled>
+            <i class="fas fa-cash-register me-2"></i>Checkout
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <script>
 let cart = [];
 
+// ── Search ──────────────────────────────────────────────────
 function searchProducts() {
-    const input = document.getElementById('searchInput').value.toLowerCase();
-    document.querySelectorAll('.product-card').forEach(card => {
-        card.style.display = card.dataset.name.includes(input) ? '' : 'none';
-    });
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('.product-card').forEach(c => {
+    c.style.display = c.dataset.name.includes(q) ? '' : 'none';
+  });
 }
 
+// ── Add to cart ─────────────────────────────────────────────
 document.querySelectorAll('.add-to-cart').forEach(btn => {
-    btn.addEventListener('click', function () {
-        if (this.disabled) return;
-        const id = this.dataset.id;
-        const name = this.dataset.name;
-        const price = parseFloat(this.dataset.price);
-        const existing = cart.find(item => item.id === id);
-        if (existing) {
-            existing.quantity += 1;
-        } else {
-            cart.push({ id, name, price, quantity: 1 });
-        }
-        updateCart();
-    });
+  btn.addEventListener('click', function () {
+    if (this.disabled) return;
+    const id    = this.dataset.id;
+    const name  = this.dataset.name;
+    const price = parseFloat(this.dataset.price);
+    const stock = parseInt(this.dataset.stock);
+    const existing = cart.find(i => i.id === id);
+    if (existing) {
+      if (existing.quantity >= stock) {
+        showToast(`Only ${stock} units of "${name}" in stock`, 'warning');
+        return;
+      }
+      existing.quantity += 1;
+    } else {
+      cart.push({ id, name, price, quantity: 1, stock });
+    }
+    renderCart();
+  });
 });
 
-function updateCart() {
-    const container = document.getElementById('cartItems');
-    container.innerHTML = '';
-    let total = 0;
+// ── Render cart ─────────────────────────────────────────────
+function renderCart() {
+  const container = document.getElementById('cartItems');
+  const emptyMsg  = document.getElementById('emptyMsg');
+  container.innerHTML = '';
 
-    cart.forEach((item, index) => {
-        const lineTotal = item.quantity * item.price;
-        total += lineTotal;
+  if (cart.length === 0) {
+    container.appendChild(emptyMsg);
+    emptyMsg.style.display = '';
+    document.getElementById('cartTotal').textContent   = 'KSh 0.00';
+    document.getElementById('checkoutBtn').disabled    = true;
+    document.getElementById('cartCount').style.display = 'none';
+    return;
+  }
 
-        const div = document.createElement('div');
-        div.className = 'd-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded';
-        div.innerHTML = `
-            <div class="flex-grow-1 me-2">
-                <strong class="small">${item.name}</strong><br>
-                <div class="d-flex align-items-center gap-1 mt-1">
-                    <button class="btn btn-outline-secondary btn-sm qty-btn" data-index="${index}" data-action="dec" style="padding:0 6px;line-height:1.4;">−</button>
-                    <span class="small px-1">${item.quantity}</span>
-                    <button class="btn btn-outline-secondary btn-sm qty-btn" data-index="${index}" data-action="inc" style="padding:0 6px;line-height:1.4;">+</button>
-                    <small class="text-muted ms-1">× KSh ${item.price.toFixed(2)}</small>
-                </div>
-            </div>
-            <div class="text-end flex-shrink-0">
-                <strong class="small">KSh ${lineTotal.toFixed(2)}</strong><br>
-                <button class="btn btn-sm btn-danger mt-1 remove-item" data-index="${index}">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-        container.appendChild(div);
-    });
+  emptyMsg.style.display = 'none';
+  let total = 0;
 
-    document.getElementById('cartTotal').textContent = 'KSh ' + total.toFixed(2);
-    document.getElementById('checkoutBtn').disabled = cart.length === 0;
+  cart.forEach((item, i) => {
+    const lineTotal = item.quantity * item.price;
+    total += lineTotal;
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+    div.innerHTML = `
+      <div class="d-flex justify-content-between align-items-start">
+        <div style="flex:1;min-width:0;margin-right:.5rem;">
+          <div class="fw-semibold text-truncate" style="font-size:.85rem;">${item.name}</div>
+          <div class="text-muted" style="font-size:.75rem;">KSh ${item.price.toFixed(2)} each</div>
+          <div class="qty-box mt-1">
+            <button class="qty-dec" data-i="${i}">−</button>
+            <span>${item.quantity}</span>
+            <button class="qty-inc" data-i="${i}">+</button>
+          </div>
+        </div>
+        <div class="text-end flex-shrink-0">
+          <div class="fw-bold text-success" style="font-size:.88rem;">KSh ${lineTotal.toFixed(2)}</div>
+          <button class="btn btn-sm btn-outline-danger mt-1 remove-item" data-i="${i}"
+                  style="padding:1px 7px;font-size:.75rem;">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>`;
+    container.appendChild(div);
+  });
+
+  document.getElementById('cartTotal').textContent = 'KSh ' + total.toFixed(2);
+  document.getElementById('checkoutBtn').disabled  = false;
+  const badge       = document.getElementById('cartCount');
+  badge.textContent = cart.reduce((s, i) => s + i.quantity, 0);
+  badge.style.display = '';
 }
 
+// ── Cart interactions ────────────────────────────────────────
 document.getElementById('cartItems').addEventListener('click', function (e) {
-    // Remove item
-    const removeBtn = e.target.closest('.remove-item');
-    if (removeBtn) {
-        cart.splice(parseInt(removeBtn.dataset.index), 1);
-        updateCart();
-        return;
+  const dec = e.target.closest('.qty-dec');
+  const inc = e.target.closest('.qty-inc');
+  const rem = e.target.closest('.remove-item');
+  if (dec) {
+    const i = parseInt(dec.dataset.i);
+    cart[i].quantity -= 1;
+    if (cart[i].quantity <= 0) cart.splice(i, 1);
+    renderCart();
+  } else if (inc) {
+    const i = parseInt(inc.dataset.i);
+    if (cart[i].quantity >= cart[i].stock) {
+      showToast(`Only ${cart[i].stock} units in stock`, 'warning');
+      return;
     }
-    // Qty buttons
-    const qtyBtn = e.target.closest('.qty-btn');
-    if (qtyBtn) {
-        const index = parseInt(qtyBtn.dataset.index);
-        if (qtyBtn.dataset.action === 'inc') {
-            cart[index].quantity += 1;
-        } else {
-            cart[index].quantity -= 1;
-            if (cart[index].quantity <= 0) cart.splice(index, 1);
-        }
-        updateCart();
-    }
+    cart[i].quantity += 1;
+    renderCart();
+  } else if (rem) {
+    cart.splice(parseInt(rem.dataset.i), 1);
+    renderCart();
+  }
 });
 
-// ── Client select: show/hide credit option ──────────────────
+// ── Show credit warning if credit selected but no client ─────
+document.getElementById('paymentMethod').addEventListener('change', function () {
+  const warn = document.getElementById('creditWarning');
+  const hasClient = document.getElementById('clientSelect').value !== '';
+  warn.style.display = (this.value === 'credit' && !hasClient) ? 'block' : 'none';
+});
+
+// ── Hide credit warning when client is selected ──────────────
 document.getElementById('clientSelect').addEventListener('change', function () {
-    const hasClient = this.value !== '';
-    const creditOption = document.getElementById('creditOption');
-    const creditHint   = document.getElementById('creditHint');
-    const pm           = document.getElementById('paymentMethod');
-
-    if (hasClient) {
-        creditOption.style.display = '';   // show Credit option
-        creditHint.style.display   = 'none';
-    } else {
-        creditOption.style.display = 'none'; // hide Credit option
-        creditHint.style.display   = 'none';
-        if (pm.value === 'credit') {
-            pm.value = 'cash';             // reset to cash if credit was selected
-        }
-    }
+  if (this.value !== '') {
+    document.getElementById('creditWarning').style.display = 'none';
+  }
 });
 
-// Show hint when payment method focused but no client selected
-document.getElementById('paymentMethod').addEventListener('focus', function () {
-    const hasClient = document.getElementById('clientSelect').value !== '';
-    document.getElementById('creditHint').style.display = hasClient ? 'none' : 'block';
-});
-document.getElementById('paymentMethod').addEventListener('blur', function () {
-    document.getElementById('creditHint').style.display = 'none';
-});
-
+// ── Checkout ─────────────────────────────────────────────────
 document.getElementById('checkoutBtn').addEventListener('click', function () {
-    if (cart.length === 0) { alert('Cart is empty'); return; }
-    const clientId = document.getElementById('clientSelect').value || null;
-    const paymentMethod = document.getElementById('paymentMethod').value;
-    if (paymentMethod === 'credit' && !clientId) {
-        alert('Please select a client for credit sale');
-        return;
+  if (cart.length === 0) return;
+
+  const clientId = document.getElementById('clientSelect').value || null;
+  const method   = document.getElementById('paymentMethod').value;
+
+  if (method === 'credit' && !clientId) {
+    document.getElementById('creditWarning').style.display = 'block';
+    document.getElementById('clientSelect').focus();
+    showToast('Please select a client to use Credit payment', 'danger');
+    return;
+  }
+
+  const items = cart.map(item => ({
+    product_id:    item.id,
+    quantity:      item.quantity,
+    selling_price: item.price
+  }));
+
+  this.disabled  = true;
+  this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+
+  fetch('/pos/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items, payment_method: method, client_id: clientId })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      cart = [];
+      renderCart();
+      window.location.href = data.redirect;
+    } else {
+      showToast(data.message || 'Sale failed. Please try again.', 'danger');
     }
-
-    const items = cart.map(item => ({
-        product_id: item.id,
-        quantity: item.quantity,
-        selling_price: item.price
-    }));
-
-    this.disabled = true;
-    this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
-
-    fetch('/pos/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items, payment_method: paymentMethod, client_id: clientId })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            cart = [];
-            updateCart();
-            window.location.href = data.redirect;
-        } else {
-            alert(data.message || 'Sale failed. Please try again.');
-        }
-    })
-    .catch(() => alert('Network error. Please try again.'))
-    .finally(() => {
-        const btn = document.getElementById('checkoutBtn');
-        btn.disabled = cart.length === 0;
-        btn.innerHTML = '<i class="fas fa-cash-register me-2"></i>Checkout';
-    });
+  })
+  .catch(() => showToast('Network error. Please try again.', 'danger'))
+  .finally(() => {
+    const btn     = document.getElementById('checkoutBtn');
+    btn.disabled  = cart.length === 0;
+    btn.innerHTML = '<i class="fas fa-cash-register me-2"></i>Checkout';
+  });
 });
+
+// ── Toast ────────────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.className = `alert alert-${type} shadow`;
+  t.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;min-width:260px;font-size:.875rem;';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
 </script>
 
-<style>
-.product-card .card { transition: transform 0.15s; }
-.product-card .card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.12) !important; }
-</style>
 {% endblock %}
