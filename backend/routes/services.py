@@ -83,7 +83,7 @@ def send_stk_push(phone, amount, account_ref, description, config):
             'Content-Type': 'application/json'
         }
 
-        resp = requests.post(stk_url, json=payload, headers=headers, timeout=15)
+        resp = requests.post(stk_url, json=payload, headers=headers, timeout=30)
         data = resp.json()
 
         if data.get('ResponseCode') == '0':
