@@ -4,6 +4,7 @@ from datetime import datetime
 
 bp = Blueprint('purchases', __name__, url_prefix='/purchases')
 
+
 def get_business_query():
     if session.get('role') == 'super_admin':
         return {}
@@ -11,9 +12,10 @@ def get_business_query():
     if business_id:
         try:
             return {"business_id": ObjectId(business_id)}
-        except:
+        except Exception:
             return {}
     return {}
+
 
 def group_by_business(items, db):
     businesses = {str(b['_id']): b['name'] for b in db.businesses.find()}
@@ -24,21 +26,24 @@ def group_by_business(items, db):
         grouped.setdefault(bname, []).append(item)
     return grouped
 
-def enrich_purchases(purchases, db):
-    """Attach supplier_name and product_name to each purchase."""
-    supplier_query = get_business_query()
-    product_query = get_business_query()
-    suppliers = {str(s['_id']): s['name'] for s in db.suppliers.find(supplier_query)}
-    products = {str(p['_id']): p['name'] for p in db.products.find(product_query)}
+
+def enrich_purchases(purchases, db, query):
+    """Attach supplier_name and product_name to each purchase.
+    query is passed in from the route so session is never accessed here."""
+    suppliers = {str(s['_id']): s['name'] for s in db.suppliers.find(query)}
+    products = {str(p['_id']): p['name'] for p in db.products.find(query)}
 
     for purchase in purchases:
-        supplier_id_str = str(purchase.get('supplier_id', '')) if purchase.get('supplier_id') else ''
-        purchase['supplier_name'] = suppliers.get(supplier_id_str, 'Unknown Supplier')
-        purchase_items = list(purchase.get('items', []))
-        for item in purchase_items:
-            product_id_str = str(item.get('product_id', '')) if item.get('product_id') else ''
-            item['product_name'] = products.get(product_id_str, 'Unknown Product')
-        purchase['items'] = purchase_items
+        sid = str(purchase['supplier_id']) if purchase.get('supplier_id') else ''
+        purchase['supplier_name'] = suppliers.get(sid, 'Unknown Supplier')
+
+        enriched_items = []
+        for item in list(purchase.get('items', [])):
+            pid = str(item.get('product_id', '')) if item.get('product_id') else ''
+            item['product_name'] = products.get(pid, 'Unknown Product')
+            enriched_items.append(item)
+        purchase['items'] = enriched_items
+
 
 @bp.route('/')
 def index():
@@ -47,8 +52,9 @@ def index():
 
     is_super_admin = session.get('role') == 'super_admin'
     query = get_business_query()
+
     purchases = list(current_app.db.purchases.find(query).sort("date", -1))
-    enrich_purchases(purchases, current_app.db)
+    enrich_purchases(purchases, current_app.db, query)
 
     grouped = group_by_business(purchases, current_app.db) if is_super_admin else None
 
@@ -56,6 +62,7 @@ def index():
                            purchases=purchases,
                            grouped=grouped,
                            is_super_admin=is_super_admin)
+
 
 @bp.route('/add', methods=['POST'])
 def add():
@@ -87,15 +94,19 @@ def add():
         if business_id:
             try:
                 purchase['business_id'] = ObjectId(business_id)
-            except:
+            except Exception:
                 return jsonify({'success': False, 'message': 'Invalid business context'}), 400
 
     result = current_app.db.purchases.insert_one(purchase)
     purchase_id = str(result.inserted_id)
 
     receipt_url = url_for('purchases.receipt', purchase_id=purchase_id)
-    return jsonify({'success': True, 'message': 'Purchase recorded successfully!',
-                    'redirect': receipt_url})
+    return jsonify({
+        'success': True,
+        'message': 'Purchase recorded successfully!',
+        'redirect': receipt_url
+    })
+
 
 @bp.route('/new')
 def new():
@@ -107,6 +118,7 @@ def new():
     products = list(current_app.db.products.find(query))
     return render_template('purchase_new.html', suppliers=suppliers, products=products)
 
+
 @bp.route('/receipt/<purchase_id>')
 def receipt(purchase_id):
     if 'user_id' not in session:
@@ -114,7 +126,7 @@ def receipt(purchase_id):
 
     try:
         obj_id = ObjectId(purchase_id)
-    except:
+    except Exception:
         flash('Invalid purchase ID', 'danger')
         return redirect(url_for('purchases.index'))
 
@@ -124,7 +136,7 @@ def receipt(purchase_id):
         if business_id:
             try:
                 query['business_id'] = ObjectId(business_id)
-            except:
+            except Exception:
                 flash('Access denied', 'danger')
                 return redirect(url_for('purchases.index'))
 
