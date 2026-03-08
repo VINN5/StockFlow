@@ -3,257 +3,529 @@
 {% block title %}Dashboard - StockFlow{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4 px-3">
-    {% if is_super_admin %}
-    <!-- Super Admin: System Control Panel -->
-    <h1 class="mb-3">System Control Panel</h1>
-    <p class="lead mb-4">Welcome back, {{ session.username }}. You have full control over the StockFlow platform.</p>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
-    <div class="row g-3 mb-4">
-        <div class="col-6">
-            <div class="card shadow border-primary h-100 py-2">
-                <div class="card-body text-center">
-                    <h2 class="text-primary">{{ total_businesses }}</h2>
-                    <p class="mb-0 small">Active Businesses</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-6">
-            <div class="card shadow border-success h-100 py-2">
-                <div class="card-body text-center">
-                    <h2 class="text-success">{{ total_users }}</h2>
-                    <p class="mb-0 small">Total Users</p>
-                </div>
-            </div>
-        </div>
+  :root {
+    --ink: #0a0f1e;
+    --ink-2: #1c2340;
+    --surface: #f4f5f9;
+    --card: #ffffff;
+    --accent: #2563ff;
+    --accent-soft: #e8eeff;
+    --green: #00c98d;
+    --green-soft: #e0faf3;
+    --amber: #f59e0b;
+    --amber-soft: #fef9e7;
+    --red: #ef4444;
+    --red-soft: #fef2f2;
+    --purple: #8b5cf6;
+    --purple-soft: #f3f0ff;
+    --border: #e8eaf0;
+    --text-muted: #6b7280;
+    --shadow-sm: 0 1px 3px rgba(10,15,30,0.06), 0 1px 2px rgba(10,15,30,0.04);
+    --shadow-md: 0 4px 16px rgba(10,15,30,0.08), 0 2px 6px rgba(10,15,30,0.04);
+    --shadow-lg: 0 12px 40px rgba(10,15,30,0.12);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  body { background: var(--surface); font-family: 'DM Sans', sans-serif; color: var(--ink); }
+
+  .sf-dashboard { padding: 2rem 1.5rem 4rem; max-width: 1400px; margin: 0 auto; }
+
+  /* ── Header ── */
+  .sf-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    margin-bottom: 2.5rem; gap: 1rem; flex-wrap: wrap;
+  }
+  .sf-header-left h1 {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(1.6rem, 4vw, 2.4rem); color: var(--ink); margin: 0; line-height: 1.1;
+  }
+  .sf-header-left p { color: var(--text-muted); margin: .35rem 0 0; font-size: .95rem; }
+  .sf-time-badge {
+    background: var(--ink); color: #fff; border-radius: 999px;
+    padding: .45rem 1.1rem; font-size: .82rem; font-weight: 500;
+    white-space: nowrap; letter-spacing: .02em;
+  }
+
+  /* ── Section label ── */
+  .sf-section-label {
+    font-family: 'Syne', sans-serif; font-size: .72rem; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted);
+    margin: 0 0 1rem; display: flex; align-items: center; gap: .5rem;
+  }
+  .sf-section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── Stat cards grid ── */
+  .sf-stats { display: grid; gap: 1rem; margin-bottom: 1.5rem; }
+  .sf-stats-3 { grid-template-columns: repeat(3, 1fr); }
+  .sf-stats-2 { grid-template-columns: repeat(2, 1fr); }
+  .sf-stats-4 { grid-template-columns: repeat(4, 1fr); }
+
+  .sf-stat {
+    background: var(--card); border-radius: var(--radius);
+    padding: 1.4rem 1.5rem; box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border); position: relative; overflow: hidden;
+    transition: transform .18s, box-shadow .18s;
+  }
+  .sf-stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .sf-stat-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; margin-bottom: 1rem;
+  }
+  .sf-stat-value {
+    font-family: 'Syne', sans-serif; font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 800; line-height: 1; color: var(--ink); margin-bottom: .3rem;
+  }
+  .sf-stat-label { font-size: .82rem; color: var(--text-muted); font-weight: 500; }
+  .sf-stat-accent {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  /* color variants */
+  .sf-blue  .sf-stat-icon { background: var(--accent-soft); color: var(--accent); }
+  .sf-blue  .sf-stat-accent { background: var(--accent); }
+  .sf-green .sf-stat-icon { background: var(--green-soft); color: var(--green); }
+  .sf-green .sf-stat-accent { background: var(--green); }
+  .sf-amber .sf-stat-icon { background: var(--amber-soft); color: var(--amber); }
+  .sf-amber .sf-stat-accent { background: var(--amber); }
+  .sf-red   .sf-stat-icon { background: var(--red-soft); color: var(--red); }
+  .sf-red   .sf-stat-accent { background: var(--red); }
+  .sf-purple .sf-stat-icon { background: var(--purple-soft); color: var(--purple); }
+  .sf-purple .sf-stat-accent { background: var(--purple); }
+  .sf-ink   .sf-stat-icon { background: rgba(255,255,255,.12); color: #fff; }
+  .sf-ink { background: var(--ink); color: #fff; border-color: var(--ink-2); }
+  .sf-ink .sf-stat-value, .sf-ink .sf-stat-label { color: #fff; }
+  .sf-ink .sf-stat-label { opacity: .65; }
+  .sf-ink .sf-stat-accent { background: var(--accent); }
+
+  /* ── Hero sales card ── */
+  .sf-hero {
+    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%);
+    border-radius: var(--radius); padding: 2rem; color: #fff;
+    box-shadow: var(--shadow-lg); margin-bottom: 1.5rem; position: relative; overflow: hidden;
+  }
+  .sf-hero::before {
+    content: ''; position: absolute; top: -60px; right: -60px;
+    width: 220px; height: 220px; border-radius: 50%;
+    background: rgba(37,99,255,.25); pointer-events: none;
+  }
+  .sf-hero::after {
+    content: ''; position: absolute; bottom: -80px; right: 60px;
+    width: 160px; height: 160px; border-radius: 50%;
+    background: rgba(0,201,141,.15); pointer-events: none;
+  }
+  .sf-hero-label { font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; opacity: .6; margin-bottom: .5rem; }
+  .sf-hero-amount { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 800; line-height: 1; }
+  .sf-hero-sub { opacity: .65; font-size: .88rem; margin-top: .4rem; }
+  .sf-hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
+  .sf-hero-mini { background: rgba(255,255,255,.08); border-radius: var(--radius-sm); padding: .9rem 1rem; }
+  .sf-hero-mini-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.15rem; }
+  .sf-hero-mini-lbl { font-size: .75rem; opacity: .6; margin-top: .1rem; }
+
+  /* ── Table card ── */
+  .sf-card {
+    background: var(--card); border-radius: var(--radius); border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 1.5rem;
+  }
+  .sf-card-header {
+    padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .sf-card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; margin: 0; }
+  .sf-badge {
+    font-size: .72rem; font-weight: 600; padding: .3rem .75rem;
+    border-radius: 999px; letter-spacing: .02em;
+  }
+  .sf-badge-green { background: var(--green-soft); color: #00956a; }
+  .sf-badge-amber { background: var(--amber-soft); color: #b45309; }
+  .sf-badge-blue  { background: var(--accent-soft); color: var(--accent); }
+
+  .sf-table { width: 100%; border-collapse: collapse; }
+  .sf-table thead th {
+    padding: .75rem 1.5rem; font-size: .72rem; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted);
+    border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap;
+  }
+  .sf-table tbody tr { transition: background .12s; }
+  .sf-table tbody tr:hover { background: var(--surface); }
+  .sf-table tbody td {
+    padding: .9rem 1.5rem; font-size: .9rem; border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .sf-table tbody tr:last-child td { border-bottom: none; }
+  .sf-payment {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-size: .78rem; font-weight: 600; padding: .25rem .65rem;
+    border-radius: 999px;
+  }
+  .sf-payment-cash { background: var(--green-soft); color: #00956a; }
+  .sf-payment-credit { background: var(--amber-soft); color: #b45309; }
+  .sf-payment-mpesa { background: var(--accent-soft); color: var(--accent); }
+
+  /* ── Super admin grid ── */
+  .sf-admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+  .sf-quick-actions a {
+    display: flex; align-items: center; gap: .85rem;
+    padding: 1rem 1.25rem; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--card);
+    color: var(--ink); text-decoration: none; font-weight: 500; font-size: .9rem;
+    transition: all .15s; margin-bottom: .6rem;
+  }
+  .sf-quick-actions a:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .sf-quick-actions a .sf-qa-icon {
+    width: 36px; height: 36px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--accent-soft); color: var(--accent); flex-shrink: 0;
+  }
+  .sf-biz-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .9rem 1.25rem; border-bottom: 1px solid var(--border);
+  }
+  .sf-biz-item:last-child { border-bottom: none; }
+  .sf-biz-name { font-weight: 600; font-size: .9rem; }
+  .sf-biz-loc { font-size: .78rem; color: var(--text-muted); margin-top: .1rem; }
+  .sf-biz-date { font-size: .75rem; color: var(--text-muted); white-space: nowrap; }
+
+  /* ── Empty state ── */
+  .sf-empty { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: .9rem; }
+  .sf-empty i { font-size: 2rem; opacity: .3; margin-bottom: .75rem; display: block; }
+
+  /* ── Footer banner ── */
+  .sf-footer-banner {
+    background: linear-gradient(135deg, var(--accent-soft), var(--green-soft));
+    border-radius: var(--radius); padding: 1.75rem 2rem; text-align: center;
+    border: 1px solid var(--border); margin-top: 2rem;
+  }
+  .sf-footer-banner h3 { font-family: 'Syne', sans-serif; font-weight: 700; margin: 0 0 .3rem; font-size: 1.15rem; }
+  .sf-footer-banner p { color: var(--text-muted); margin: 0; font-size: .88rem; }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .sf-stats-3, .sf-stats-4 { grid-template-columns: repeat(2, 1fr); }
+    .sf-admin-grid { grid-template-columns: 1fr; }
+    .sf-hero-grid { grid-template-columns: 1fr 1fr; }
+    .sf-table thead { display: none; }
+    .sf-table tbody td {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .6rem 1rem; border-bottom: none;
+    }
+    .sf-table tbody td::before {
+      content: attr(data-label); font-size: .72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted);
+    }
+    .sf-table tbody tr { display: block; border-bottom: 1px solid var(--border); padding: .5rem 0; }
+  }
+  @media (max-width: 480px) {
+    .sf-stats-3 { grid-template-columns: 1fr; }
+    .sf-stats-2 { grid-template-columns: 1fr; }
+    .sf-hero-grid { grid-template-columns: 1fr; }
+    .sf-dashboard { padding: 1.25rem 1rem 3rem; }
+  }
+
+  /* ── Entry animations ── */
+  .sf-fade-in { animation: sfFade .45s ease both; }
+  .sf-fade-in:nth-child(1) { animation-delay: .05s; }
+  .sf-fade-in:nth-child(2) { animation-delay: .1s; }
+  .sf-fade-in:nth-child(3) { animation-delay: .15s; }
+  .sf-fade-in:nth-child(4) { animation-delay: .2s; }
+  @keyframes sfFade { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+</style>
+
+<div class="sf-dashboard">
+
+  {% if is_super_admin %}
+  <!-- ════════════════════════════════════
+       SUPER ADMIN VIEW
+  ════════════════════════════════════ -->
+  <div class="sf-header">
+    <div class="sf-header-left">
+      <h1>System Control Panel</h1>
+      <p>Welcome back, <strong>{{ session.username }}</strong> — full platform access</p>
+    </div>
+    <div class="sf-time-badge"><i class="fas fa-shield-alt me-1"></i> Super Admin</div>
+  </div>
+
+  <!-- Top stats -->
+  <p class="sf-section-label">Platform Overview</p>
+  <div class="sf-stats sf-stats-2 sf-fade-in" style="max-width:480px; margin-bottom:2rem;">
+    <div class="sf-stat sf-blue sf-fade-in">
+      <div class="sf-stat-icon"><i class="fas fa-building"></i></div>
+      <div class="sf-stat-value">{{ total_businesses }}</div>
+      <div class="sf-stat-label">Active Businesses</div>
+      <div class="sf-stat-accent"></div>
+    </div>
+    <div class="sf-stat sf-green sf-fade-in">
+      <div class="sf-stat-icon"><i class="fas fa-users"></i></div>
+      <div class="sf-stat-value">{{ total_users }}</div>
+      <div class="sf-stat-label">Total Users</div>
+      <div class="sf-stat-accent"></div>
+    </div>
+  </div>
+
+  <!-- Admin two-col grid -->
+  <div class="sf-admin-grid">
+    <!-- Quick actions -->
+    <div>
+      <p class="sf-section-label">Quick Actions</p>
+      <div class="sf-quick-actions">
+        <a href="{{ url_for('businesses') }}">
+          <div class="sf-qa-icon"><i class="fas fa-building"></i></div>
+          Manage Businesses
+          <i class="fas fa-chevron-right ms-auto" style="opacity:.3;font-size:.75rem;"></i>
+        </a>
+        <a href="{{ url_for('users') }}">
+          <div class="sf-qa-icon"><i class="fas fa-users"></i></div>
+          Manage Users
+          <i class="fas fa-chevron-right ms-auto" style="opacity:.3;font-size:.75rem;"></i>
+        </a>
+      </div>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-12 col-lg-6">
-            <h3>Quick Actions</h3>
-            <div class="list-group">
-                <a href="{{ url_for('businesses') }}" class="list-group-item list-group-item-action">
-                    <i class="fas fa-building me-2"></i> Manage Businesses
-                </a>
-                <a href="{{ url_for('users') }}" class="list-group-item list-group-item-action">
-                    <i class="fas fa-users me-2"></i> Manage Users
-                </a>
-            </div>
+    <!-- Businesses list -->
+    <div>
+      <p class="sf-section-label">Active Businesses</p>
+      <div class="sf-card">
+        {% for biz in businesses %}
+        <div class="sf-biz-item">
+          <div>
+            <div class="sf-biz-name">{{ biz.name }}</div>
+            <div class="sf-biz-loc"><i class="fas fa-map-marker-alt me-1" style="font-size:.7rem;"></i>{{ biz.location or 'No location' }}</div>
+          </div>
+          <div class="sf-biz-date">{{ biz.created_at.strftime('%b %d, %Y') }}</div>
         </div>
-        <div class="col-12 col-lg-6">
-            <h3>Active Businesses</h3>
-            <div class="list-group">
-                {% for biz in businesses %}
-                <div class="list-group-item">
-                    <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">{{ biz.name }}</h6>
-                        <small>{{ biz.created_at.strftime('%b %d') }}</small>
-                    </div>
-                    <p class="mb-1 text-muted small">{{ biz.location or 'No location' }}</p>
-                </div>
-                {% else %}
-                <div class="alert alert-info">No businesses yet</div>
-                {% endfor %}
-            </div>
-        </div>
+        {% else %}
+        <div class="sf-empty"><i class="fas fa-building"></i>No businesses yet</div>
+        {% endfor %}
+      </div>
     </div>
+  </div>
 
-    <h3>All Users</h3>
-    <div class="table-responsive">
-        <table class="table table-striped table-card-mobile">
-            <thead>
-                <tr>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th>Business</th>
-                    <th>Created</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                <tr>
-                    <td data-label="Username">{{ user.username }}</td>
-                    <td data-label="Role">
-                        <span class="badge bg-{{ 'danger' if user.role == 'super_admin' else 'primary' if user.role == 'admin' else 'secondary' }}">
-                            {{ user.role|capitalize }}
-                        </span>
-                    </td>
-                    <td data-label="Business">{{ user.business }}</td>
-                    <td data-label="Created">{{ user.created }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  <!-- All users table -->
+  <p class="sf-section-label">All Users</p>
+  <div class="sf-card">
+    <div class="sf-card-header">
+      <span class="sf-card-title">User Directory</span>
+      <span class="sf-badge sf-badge-blue">{{ total_users }} total</span>
     </div>
+    <table class="sf-table">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Business</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td data-label="Username"><strong>{{ user.username }}</strong></td>
+          <td data-label="Role">
+            {% if user.role == 'super_admin' %}
+              <span class="sf-badge" style="background:#fee2e2;color:#b91c1c;">Super Admin</span>
+            {% elif user.role == 'admin' %}
+              <span class="sf-badge sf-badge-blue">Admin</span>
+            {% else %}
+              <span class="sf-badge" style="background:#f3f4f6;color:#374151;">Cashier</span>
+            {% endif %}
+          </td>
+          <td data-label="Business">{{ user.business }}</td>
+          <td data-label="Created">{{ user.created }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4"><div class="sf-empty"><i class="fas fa-users"></i>No users found</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-    {% else %}
-    <!-- Branch Admin / Cashier: Operational Dashboard -->
-    <h1 class="mb-2">Welcome back, {{ session.username }}!</h1>
-    <p class="lead mb-4">Here's your {{ business_name }} overview</p>
+  {% else %}
+  <!-- ════════════════════════════════════
+       BRANCH ADMIN / CASHIER VIEW
+  ════════════════════════════════════ -->
 
-    <!-- Key stats -->
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-sm-4">
-            <div class="card text-white bg-primary shadow-lg border-0">
-                <div class="card-body py-4 text-center">
-                    <i class="fas fa-boxes fa-2x mb-2 opacity-75"></i>
-                    <h2 class="mb-0">{{ total_products }}</h2>
-                    <p class="mb-0 small">Total Products</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-sm-4">
-            <div class="card text-white bg-warning shadow-lg border-0">
-                <div class="card-body py-4 text-center">
-                    <i class="fas fa-exclamation-triangle fa-2x mb-2 opacity-75"></i>
-                    <h2 class="mb-0">{{ low_stock_count }}</h2>
-                    <p class="mb-0 small">Low Stock Items</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-sm-4">
-            <div class="card text-white bg-success shadow-lg border-0">
-                <div class="card-body py-4 text-center">
-                    <i class="fas fa-money-bill-wave fa-2x mb-2 opacity-75"></i>
-                    <h2 class="mb-0">KSh {{ "%.2f"|format(today_sales_total) }}</h2>
-                    <p class="mb-0 small">Today's Sales</p>
-                </div>
-            </div>
-        </div>
+  <div class="sf-header">
+    <div class="sf-header-left">
+      <h1>{{ business_name }}</h1>
+      <p>Welcome back, <strong>{{ session.username }}</strong></p>
     </div>
+    <div class="sf-time-badge" id="sf-clock"><i class="fas fa-clock me-1"></i> —</div>
+  </div>
 
+  <!-- Top 3 KPI cards -->
+  <p class="sf-section-label">Key Metrics</p>
+  <div class="sf-stats sf-stats-3" style="margin-bottom:1.5rem;">
+    <div class="sf-stat sf-blue sf-fade-in">
+      <div class="sf-stat-icon"><i class="fas fa-boxes"></i></div>
+      <div class="sf-stat-value">{{ total_products }}</div>
+      <div class="sf-stat-label">Total Products</div>
+      <div class="sf-stat-accent"></div>
+    </div>
+    <div class="sf-stat sf-amber sf-fade-in">
+      <div class="sf-stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+      <div class="sf-stat-value">{{ low_stock_count }}</div>
+      <div class="sf-stat-label">Low Stock Items</div>
+      <div class="sf-stat-accent"></div>
+    </div>
+    <div class="sf-stat sf-green sf-fade-in">
+      <div class="sf-stat-icon"><i class="fas fa-receipt"></i></div>
+      <div class="sf-stat-value">{{ today_sales|length }}</div>
+      <div class="sf-stat-label">Sales Today</div>
+      <div class="sf-stat-accent"></div>
+    </div>
+  </div>
+
+  <!-- Hero today's sales card -->
+  <div class="sf-hero sf-fade-in">
+    <div class="sf-hero-label">Today's Revenue</div>
+    <div class="sf-hero-amount">KSh {{ "%.2f"|format(today_sales_total) }}</div>
+    <div class="sf-hero-sub">As of right now · {{ business_name }}</div>
     {% if is_branch_admin %}
-    <!-- Branch Admin Only: Financial Stats -->
-    <div class="row g-3 mb-4">
-        <div class="col-6">
-            <div class="card text-white bg-info shadow-lg border-0">
-                <div class="card-body py-3 text-center">
-                    <i class="fas fa-dollar-sign fa-2x mb-2 opacity-75"></i>
-                    <h4 class="mb-0">KSh {{ "%.2f"|format(current_stock_value) }}</h4>
-                    <p class="mb-0 small">Stock Value</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-6">
-            <div class="card text-white bg-purple shadow-lg border-0">
-                <div class="card-body py-3 text-center">
-                    <i class="fas fa-chart-line fa-2x mb-2 opacity-75"></i>
-                    <h4 class="mb-0">KSh {{ "%.2f"|format(potential_sales_value) }}</h4>
-                    <p class="mb-0 small">Potential Sales</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sales Summary -->
-    <h3 class="mt-4 mb-3">Sales Summary</h3>
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
-            <div class="card text-white bg-success shadow text-center">
-                <div class="card-body py-3">
-                    <i class="fas fa-calendar-day fa-2x mb-2 opacity-75"></i>
-                    <h5 class="mb-0">KSh {{ "%.2f"|format(daily_sales) }}</h5>
-                    <small>Daily</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card text-white bg-info shadow text-center">
-                <div class="card-body py-3">
-                    <i class="fas fa-calendar-week fa-2x mb-2 opacity-75"></i>
-                    <h5 class="mb-0">KSh {{ "%.2f"|format(weekly_sales) }}</h5>
-                    <small>Weekly</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card text-white bg-primary shadow text-center">
-                <div class="card-body py-3">
-                    <i class="fas fa-calendar-month fa-2x mb-2 opacity-75"></i>
-                    <h5 class="mb-0">KSh {{ "%.2f"|format(monthly_sales) }}</h5>
-                    <small>Monthly</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card text-white bg-dark shadow text-center">
-                <div class="card-body py-3">
-                    <i class="fas fa-calendar-alt fa-2x mb-2 opacity-75"></i>
-                    <h5 class="mb-0">KSh {{ "%.2f"|format(yearly_sales) }}</h5>
-                    <small>Yearly</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Profit Summary -->
-    <h3 class="mb-3">Profit Summary</h3>
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-md-4">
-            <div class="card text-white bg-success shadow text-center">
-                <div class="card-body py-3">
-                    <i class="fas fa-wallet fa-2x mb-2 opacity-75"></i>
-                    <h5 class="mb-0">KSh {{ "%.2f"|format(daily_profit) }}</h5>
-                    <small>Daily Profit</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="card text-white bg-warning shadow text-center">
-                <div class="card-body py-3">
-                    <i class="fas fa-chart-line fa-2x mb-2 opacity-75"></i>
-                    <h5 class="mb-0">KSh {{ "%.2f"|format(weekly_profit) }}</h5>
-                    <small>Weekly Profit</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="card text-white bg-purple shadow text-center">
-                <div class="card-body py-3">
-                    <i class="fas fa-coins fa-2x mb-2 opacity-75"></i>
-                    <h5 class="mb-0">KSh {{ "%.2f"|format(monthly_profit) }}</h5>
-                    <small>Monthly Profit</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Today's Sales Details -->
-    <h3 class="mt-4 mb-3">Today's Sales Details</h3>
-    <div class="table-responsive">
-        <table class="table table-striped table-card-mobile">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Client</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Payment</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for sale in today_sales %}
-                <tr>
-                    <td data-label="Time">{{ sale.date.strftime('%H:%M') }}</td>
-                    <td data-label="Client">{{ sale.client_name }}</td>
-                    <td data-label="Items">{{ sale.items_count }}</td>
-                    <td data-label="Total">KSh {{ "%.2f"|format(sale.total_amount) }}</td>
-                    <td data-label="Payment">{{ sale.payment_method|capitalize }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" class="text-center">No sales today yet</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="sf-hero-grid">
+      <div class="sf-hero-mini">
+        <div class="sf-hero-mini-val">KSh {{ "%.2f"|format(weekly_sales) }}</div>
+        <div class="sf-hero-mini-lbl">This Week</div>
+      </div>
+      <div class="sf-hero-mini">
+        <div class="sf-hero-mini-val">KSh {{ "%.2f"|format(monthly_sales) }}</div>
+        <div class="sf-hero-mini-lbl">This Month</div>
+      </div>
+      <div class="sf-hero-mini">
+        <div class="sf-hero-mini-val">KSh {{ "%.2f"|format(daily_profit) }}</div>
+        <div class="sf-hero-mini-lbl">Today's Profit</div>
+      </div>
+      <div class="sf-hero-mini">
+        <div class="sf-hero-mini-val">KSh {{ "%.2f"|format(yearly_sales) }}</div>
+        <div class="sf-hero-mini-lbl">This Year</div>
+      </div>
     </div>
     {% endif %}
+  </div>
 
-    <div class="text-center py-4 bg-light rounded-3 shadow-sm mt-4">
-        <h2 class="display-6 mb-2">Keep up the great work!</h2>
-        <p class="lead text-muted mb-0">You're making a difference at {{ business_name }}</p>
+  {% if is_branch_admin %}
+  <!-- Stock value cards -->
+  <p class="sf-section-label">Inventory Value</p>
+  <div class="sf-stats sf-stats-2" style="margin-bottom:1.5rem;">
+    <div class="sf-stat sf-ink sf-fade-in">
+      <div class="sf-stat-icon"><i class="fas fa-warehouse"></i></div>
+      <div class="sf-stat-value">KSh {{ "%.2f"|format(current_stock_value) }}</div>
+      <div class="sf-stat-label">Current Stock Value</div>
+      <div class="sf-stat-accent"></div>
     </div>
-    {% endif %}
+    <div class="sf-stat sf-purple sf-fade-in">
+      <div class="sf-stat-icon"><i class="fas fa-chart-line"></i></div>
+      <div class="sf-stat-value">KSh {{ "%.2f"|format(potential_sales_value) }}</div>
+      <div class="sf-stat-label">Potential Sales Value</div>
+      <div class="sf-stat-accent"></div>
+    </div>
+  </div>
+
+  <!-- Profit summary -->
+  <p class="sf-section-label">Profit Breakdown</p>
+  <div class="sf-stats sf-stats-3" style="margin-bottom:1.5rem;">
+    <div class="sf-stat sf-green sf-fade-in">
+      <div class="sf-stat-icon"><i class="fas fa-wallet"></i></div>
+      <div class="sf-stat-value" style="font-size:1.3rem;">KSh {{ "%.2f"|format(daily_profit) }}</div>
+      <div class="sf-stat-label">Daily Profit</div>
+      <div class="sf-stat-accent"></div>
+    </div>
+    <div class="sf-stat sf-amber sf-fade-in">
+      <div class="sf-stat-icon"><i class="fas fa-calendar-week"></i></div>
+      <div class="sf-stat-value" style="font-size:1.3rem;">KSh {{ "%.2f"|format(weekly_profit) }}</div>
+      <div class="sf-stat-label">Weekly Profit</div>
+      <div class="sf-stat-accent"></div>
+    </div>
+    <div class="sf-stat sf-purple sf-fade-in">
+      <div class="sf-stat-icon"><i class="fas fa-coins"></i></div>
+      <div class="sf-stat-value" style="font-size:1.3rem;">KSh {{ "%.2f"|format(monthly_profit) }}</div>
+      <div class="sf-stat-label">Monthly Profit</div>
+      <div class="sf-stat-accent"></div>
+    </div>
+  </div>
+
+  <!-- Today's sales table -->
+  <p class="sf-section-label">Today's Transactions</p>
+  <div class="sf-card sf-fade-in">
+    <div class="sf-card-header">
+      <span class="sf-card-title">Sales Log</span>
+      <span class="sf-badge sf-badge-green">{{ today_sales|length }} sale{{ 's' if today_sales|length != 1 }}</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="sf-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Client</th>
+            <th>Items</th>
+            <th>Total</th>
+            <th>Payment</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sale in today_sales %}
+          <tr>
+            <td data-label="Time">
+              <span style="font-family:'Syne',sans-serif;font-weight:600;font-size:.9rem;">{{ sale.date.strftime('%H:%M') }}</span>
+            </td>
+            <td data-label="Client">{{ sale.client_name }}</td>
+            <td data-label="Items">
+              <span class="sf-badge sf-badge-blue">{{ sale.items_count }} item{{ 's' if sale.items_count != 1 }}</span>
+            </td>
+            <td data-label="Total">
+              <strong style="font-family:'Syne',sans-serif;">KSh {{ "%.2f"|format(sale.total_amount) }}</strong>
+            </td>
+            <td data-label="Payment">
+              {% set pm = sale.payment_method|lower %}
+              <span class="sf-payment {% if pm == 'cash' %}sf-payment-cash{% elif pm == 'credit' %}sf-payment-credit{% else %}sf-payment-mpesa{% endif %}">
+                <i class="fas {% if pm == 'cash' %}fa-money-bill{% elif pm == 'credit' %}fa-clock{% else %}fa-mobile-alt{% endif %}"></i>
+                {{ sale.payment_method|capitalize }}
+              </span>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5">
+              <div class="sf-empty">
+                <i class="fas fa-receipt"></i>
+                No sales recorded today yet
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Footer banner -->
+  <div class="sf-footer-banner sf-fade-in">
+    <h3>Keep up the great work! 🎯</h3>
+    <p>You're making a difference at {{ business_name }}</p>
+  </div>
+
+  {% endif %}
 </div>
+
+<script>
+  // Live clock badge
+  const clock = document.getElementById('sf-clock');
+  if (clock) {
+    const tick = () => {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2,'0');
+      const m = String(now.getMinutes()).padStart(2,'0');
+      const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      clock.innerHTML = `<i class="fas fa-clock me-1"></i>${days[now.getDay()]} ${h}:${m}`;
+    };
+    tick(); setInterval(tick, 1000);
+  }
+</script>
 {% endblock %}
