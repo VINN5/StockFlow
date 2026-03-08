@@ -59,8 +59,14 @@
                         <label for="paymentMethod" class="form-label fw-bold small">Payment Method</label>
                         <select class="form-select form-select-sm" id="paymentMethod">
                             <option value="cash">Cash</option>
-                            <option value="credit">Credit (Add to Client Balance)</option>
+                            <option value="mpesa">M-Pesa</option>
+                            <option value="credit" id="creditOption" style="display:none;">
+                                Credit (Add to Client Balance)
+                            </option>
                         </select>
+                        <small id="creditHint" class="text-muted" style="display:none;">
+                            <i class="fas fa-info-circle me-1"></i>Select a client to enable credit payments
+                        </small>
                     </div>
 
                     <hr class="my-2">
@@ -118,7 +124,12 @@ function updateCart() {
         div.innerHTML = `
             <div class="flex-grow-1 me-2">
                 <strong class="small">${item.name}</strong><br>
-                <small class="text-muted">${item.quantity} × KSh ${item.price.toFixed(2)}</small>
+                <div class="d-flex align-items-center gap-1 mt-1">
+                    <button class="btn btn-outline-secondary btn-sm qty-btn" data-index="${index}" data-action="dec" style="padding:0 6px;line-height:1.4;">−</button>
+                    <span class="small px-1">${item.quantity}</span>
+                    <button class="btn btn-outline-secondary btn-sm qty-btn" data-index="${index}" data-action="inc" style="padding:0 6px;line-height:1.4;">+</button>
+                    <small class="text-muted ms-1">× KSh ${item.price.toFixed(2)}</small>
+                </div>
             </div>
             <div class="text-end flex-shrink-0">
                 <strong class="small">KSh ${lineTotal.toFixed(2)}</strong><br>
@@ -135,30 +146,63 @@ function updateCart() {
 }
 
 document.getElementById('cartItems').addEventListener('click', function (e) {
-    const btn = e.target.closest('.remove-item');
-    if (btn) {
-        cart.splice(parseInt(btn.dataset.index), 1);
+    // Remove item
+    const removeBtn = e.target.closest('.remove-item');
+    if (removeBtn) {
+        cart.splice(parseInt(removeBtn.dataset.index), 1);
+        updateCart();
+        return;
+    }
+    // Qty buttons
+    const qtyBtn = e.target.closest('.qty-btn');
+    if (qtyBtn) {
+        const index = parseInt(qtyBtn.dataset.index);
+        if (qtyBtn.dataset.action === 'inc') {
+            cart[index].quantity += 1;
+        } else {
+            cart[index].quantity -= 1;
+            if (cart[index].quantity <= 0) cart.splice(index, 1);
+        }
         updateCart();
     }
 });
 
+// ── Client select: show/hide credit option ──────────────────
 document.getElementById('clientSelect').addEventListener('change', function () {
-    const pm = document.getElementById('paymentMethod');
-    if (this.value === '') {
-        pm.value = 'cash';
-        pm.disabled = true;
+    const hasClient = this.value !== '';
+    const creditOption = document.getElementById('creditOption');
+    const creditHint   = document.getElementById('creditHint');
+    const pm           = document.getElementById('paymentMethod');
+
+    if (hasClient) {
+        creditOption.style.display = '';   // show Credit option
+        creditHint.style.display   = 'none';
     } else {
-        pm.disabled = false;
+        creditOption.style.display = 'none'; // hide Credit option
+        creditHint.style.display   = 'none';
+        if (pm.value === 'credit') {
+            pm.value = 'cash';             // reset to cash if credit was selected
+        }
     }
 });
 
-document.getElementById('paymentMethod').disabled = !document.getElementById('clientSelect').value;
+// Show hint when payment method focused but no client selected
+document.getElementById('paymentMethod').addEventListener('focus', function () {
+    const hasClient = document.getElementById('clientSelect').value !== '';
+    document.getElementById('creditHint').style.display = hasClient ? 'none' : 'block';
+});
+document.getElementById('paymentMethod').addEventListener('blur', function () {
+    document.getElementById('creditHint').style.display = 'none';
+});
 
 document.getElementById('checkoutBtn').addEventListener('click', function () {
     if (cart.length === 0) { alert('Cart is empty'); return; }
     const clientId = document.getElementById('clientSelect').value || null;
     const paymentMethod = document.getElementById('paymentMethod').value;
-    if (paymentMethod === 'credit' && !clientId) { alert('Please select a client for credit sale'); return; }
+    if (paymentMethod === 'credit' && !clientId) {
+        alert('Please select a client for credit sale');
+        return;
+    }
 
     const items = cart.map(item => ({
         product_id: item.id,
