@@ -3,19 +3,15 @@
 {% block content %}
 
 <style>
-/* ── Screen styles ─────────────────────────────────────── */
 .report-card { background:#fff; border-radius:14px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06); padding:1.25rem; }
 .stat-pill { border-radius:12px; padding:.6rem 1rem; font-size:.82rem; font-weight:600; }
-.method-bar { height:10px; border-radius:5px; }
 .low-stock-badge { font-size:.72rem; }
 
-/* ── Print styles ──────────────────────────────────────── */
 @media print {
   body * { visibility: hidden; }
   #printArea, #printArea * { visibility: visible; }
   #printArea { position: absolute; top: 0; left: 0; width: 100%; }
   .no-print { display: none !important; }
-  .page-break { page-break-before: always; }
   table { font-size: 11px; }
   .badge { border: 1px solid #ccc; }
 }
@@ -23,7 +19,7 @@
 
 <div class="container-fluid mt-4 px-3">
 
-  <!-- ── Header + date picker ── -->
+  <!-- Header + date picker -->
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 no-print">
     <h1 class="mb-0">Sales</h1>
     <form method="GET" action="{{ url_for('sales.index') }}" class="d-flex align-items-center gap-2">
@@ -35,22 +31,22 @@
     </form>
   </div>
 
-  <!-- ════════════════════════════════════════════════════
-       DAILY REPORT SECTION
-  ════════════════════════════════════════════════════ -->
+  <!-- ══════════════════════════════════════════
+       DAILY REPORT (print area)
+  ══════════════════════════════════════════ -->
   <div id="printArea">
 
-    <!-- Print header (hidden on screen) -->
+    <!-- Print-only header -->
     <div class="d-none d-print-block text-center mb-3">
       <h2 style="font-size:1.3rem;font-weight:800;">{{ session.get('business_name', 'StockFlow') }}</h2>
       <div style="font-size:.9rem;">Daily Sales Report — {{ selected_date_display }}</div>
-      <div style="font-size:.75rem;color:#6b7280;">Printed {{ now().strftime('%d %b %Y %H:%M') if now else '' }}</div>
+      <div style="font-size:.75rem;color:#6b7280;">Printed {{ printed_at }}</div>
       <hr>
     </div>
 
     {% if not is_super_admin %}
 
-    <!-- ── Summary cards ── -->
+    <!-- Summary cards -->
     <div class="row g-3 mb-4">
       <div class="col-6 col-md-3">
         <div class="report-card text-center">
@@ -84,7 +80,7 @@
       </div>
     </div>
 
-    <!-- ── Payment breakdown ── -->
+    <!-- Payment breakdown -->
     <div class="report-card mb-4">
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:.75rem;">
         Payment Method Breakdown
@@ -108,7 +104,7 @@
       </div>
     </div>
 
-    <!-- ── Low stock alerts ── -->
+    <!-- Low stock alerts -->
     {% if low_stock %}
     <div class="report-card mb-4" style="border-left:4px solid #dc2626;">
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#dc2626;margin-bottom:.75rem;">
@@ -124,7 +120,7 @@
     </div>
     {% endif %}
 
-    <!-- ── Daily sales table ── -->
+    <!-- Daily sales table -->
     <div class="report-card mb-4">
       <div class="d-flex justify-content-between align-items-center mb-3 no-print">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;">
@@ -161,7 +157,9 @@
           <tbody>
             {% for sale in day_sales %}
             {% set sale_profit = namespace(val=0) %}
-            {% for item in sale.items %}{% set sale_profit.val = sale_profit.val + item.line_profit %}{% endfor %}
+            {% for item in sale.items %}
+              {% set sale_profit.val = sale_profit.val + item.line_profit %}
+            {% endfor %}
             <tr>
               <td style="white-space:nowrap;">
                 {{ sale.date.strftime('%H:%M') if sale.date else '—' }}
@@ -201,35 +199,68 @@
       {% endif %}
     </div>
 
-    {% endif %} {# end not super_admin #}
-  </div>
-  {# end printArea #}
+    {% endif %}{# end not super_admin #}
+  </div>{# end printArea #}
 
-  <!-- ════════════════════════════════════════════════════
-       FULL SALES HISTORY TABLE
-  ════════════════════════════════════════════════════ -->
+  <!-- ══════════════════════════════════════════
+       FULL SALES HISTORY
+  ══════════════════════════════════════════ -->
   <div class="no-print">
     <h4 class="mb-3 mt-2">Full Sales History</h4>
 
     {% if is_super_admin %}
-    {% for biz_name, biz_sales in grouped.items() %}
-    <div class="mb-5">
-      <div class="d-flex align-items-center mb-3 gap-2">
-        <span class="badge bg-primary fs-6 px-3 py-2">
-          <i class="fas fa-building me-2"></i>{{ biz_name }}
-        </span>
-        <span class="badge bg-secondary">{{ biz_sales|length }} sale{{ 's' if biz_sales|length != 1 }}</span>
-        <span class="badge bg-success">
-          KSh {{ "%.2f"|format(biz_sales|sum(attribute='total_amount')) }} total
-        </span>
+      {% for biz_name, biz_sales in grouped.items() %}
+      <div class="mb-5">
+        <div class="d-flex align-items-center mb-3 gap-2">
+          <span class="badge bg-primary fs-6 px-3 py-2">
+            <i class="fas fa-building me-2"></i>{{ biz_name }}
+          </span>
+          <span class="badge bg-secondary">{{ biz_sales|length }} sale{{ 's' if biz_sales|length != 1 }}</span>
+          <span class="badge bg-success">
+            KSh {{ "%.2f"|format(biz_sales|sum(attribute='total_amount')) }} total
+          </span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-dark">
+              <tr><th>Date</th><th>Cashier</th><th>Items</th><th>Total</th><th>Payment</th></tr>
+            </thead>
+            <tbody>
+              {% for sale in biz_sales %}
+              <tr>
+                <td>{{ sale.date.strftime('%d %b %Y %H:%M') if sale.date else 'Unknown' }}</td>
+                <td>{{ sale.cashier_name or '—' }}</td>
+                <td>
+                  <ul class="mb-0 ps-3 small">
+                    {% for item in sale.items %}
+                    <li>{{ item.quantity }} × {{ item.product_name }} @ KSh {{ "%.2f"|format(item.selling_price) }}</li>
+                    {% endfor %}
+                  </ul>
+                </td>
+                <td><strong>KSh {{ "%.2f"|format(sale.total_amount) }}</strong></td>
+                <td>
+                  <span class="badge bg-{{ 'success' if sale.payment_method == 'cash' else 'warning text-dark' if sale.payment_method == 'credit' else 'info' }}">
+                    {{ sale.payment_method|capitalize }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
+      {% else %}
+      <div class="alert alert-info">No sales found in any business.</div>
+      {% endfor %}
+
+    {% else %}
       <div class="table-responsive">
         <table class="table table-hover align-middle">
           <thead class="table-dark">
             <tr><th>Date</th><th>Cashier</th><th>Items</th><th>Total</th><th>Payment</th></tr>
           </thead>
           <tbody>
-            {% for sale in biz_sales %}
+            {% for sale in sales %}
             <tr>
               <td>{{ sale.date.strftime('%d %b %Y %H:%M') if sale.date else 'Unknown' }}</td>
               <td>{{ sale.cashier_name or '—' }}</td>
@@ -247,48 +278,14 @@
                 </span>
               </td>
             </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center py-5 text-muted">No sales recorded yet.</td>
+            </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-    </div>
-    {% else %}
-    <div class="alert alert-info">No sales found in any business.</div>
-    {% endfor %}
-
-    {% else %}
-    <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead class="table-dark">
-          <tr><th>Date</th><th>Cashier</th><th>Items</th><th>Total</th><th>Payment</th></tr>
-        </thead>
-        <tbody>
-          {% for sale in sales %}
-          <tr>
-            <td>{{ sale.date.strftime('%d %b %Y %H:%M') if sale.date else 'Unknown' }}</td>
-            <td>{{ sale.cashier_name or '—' }}</td>
-            <td>
-              <ul class="mb-0 ps-3 small">
-                {% for item in sale.items %}
-                <li>{{ item.quantity }} × {{ item.product_name }} @ KSh {{ "%.2f"|format(item.selling_price) }}</li>
-                {% endfor %}
-              </ul>
-            </td>
-            <td><strong>KSh {{ "%.2f"|format(sale.total_amount) }}</strong></td>
-            <td>
-              <span class="badge bg-{{ 'success' if sale.payment_method == 'cash' else 'warning text-dark' if sale.payment_method == 'credit' else 'info' }}">
-                {{ sale.payment_method|capitalize }}
-              </span>
-            </td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="5" class="text-center py-5 text-muted">No sales recorded yet.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
     {% endif %}
   </div>
 
@@ -303,26 +300,26 @@ function downloadPDF() {
 
   const opt = {
     margin:      [10, 10, 10, 10],
-    filename:    `Daily_Report_{{ selected_date }}.pdf`,
+    filename:    'Daily_Report_{{ selected_date }}.pdf',
     image:       { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true },
-    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak:   { mode: ['avoid-all', 'css'] }
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
-  // Add print header temporarily
   const header = document.createElement('div');
   header.id = 'pdfHeader';
   header.style.cssText = 'text-align:center;margin-bottom:16px;';
   header.innerHTML = `
     <h2 style="font-size:18px;font-weight:800;margin:0;">${biz}</h2>
     <div style="font-size:13px;">Daily Sales Report — ${date}</div>
+    <div style="font-size:11px;color:#6b7280;">Printed {{ printed_at }}</div>
     <hr style="margin:8px 0;">
   `;
   element.insertBefore(header, element.firstChild);
 
   html2pdf().set(opt).from(element).save().then(() => {
-    document.getElementById('pdfHeader').remove();
+    const h = document.getElementById('pdfHeader');
+    if (h) h.remove();
   });
 }
 </script>

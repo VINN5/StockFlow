@@ -37,61 +37,59 @@ def index():
 
     # ── Date filter ──────────────────────────────────────────
     date_str = request.args.get('date', '')
-    if date_str:
-        try:
-            selected_date = datetime.strptime(date_str, '%Y-%m-%d')
-        except ValueError:
-            selected_date = datetime.utcnow()
-    else:
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d') if date_str else datetime.utcnow()
+    except ValueError:
         selected_date = datetime.utcnow()
 
     day_start = selected_date.replace(hour=0,  minute=0,  second=0,  microsecond=0)
     day_end   = selected_date.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-    # All-time sales (for history table)
+    # ── Fetch sales ───────────────────────────────────────────
     all_sales = list(current_app.db.sales.find(query).sort("date", -1))
-
-    # Day-filtered sales (for daily report)
     day_query = {**query, "date": {"$gte": day_start, "$lte": day_end}}
     day_sales = list(current_app.db.sales.find(day_query).sort("date", 1))
 
-    # ── Enrich product names ──────────────────────────────────
+    # ── Build product lookup ──────────────────────────────────
     products = {str(p['_id']): p for p in current_app.db.products.find(query)}
 
     def enrich(sales_list):
         for sale in sales_list:
             for item in sale.get('items', []):
-                pid = str(item.get('product_id', ''))
-                product = products.get(pid, {})
-                item['product_name']  = product.get('name', 'Unknown')
-                item['purchase_price'] = product.get('purchase_price', 0)
-                item['line_total']    = item.get('quantity', 0) * item.get('selling_price', 0)
-                item['line_profit']   = item.get('quantity', 0) * (
-                    item.get('selling_price', 0) - item.get('purchase_price', 0)
-                )
+                pid      = str(item.get('product_id', ''))
+                product  = products.get(pid, {})
+                cost     = float(product.get('purchase_price', 0))
+                qty      = float(item.get('quantity', 0))
+                price    = float(item.get('selling_price', 0))
+                item['product_name']   = product.get('name', 'Unknown')
+                item['purchase_price'] = cost
+                item['line_total']     = qty * price
+                item['line_profit']    = qty * (price - cost)
         return sales_list
 
     all_sales = enrich(all_sales)
     day_sales = enrich(day_sales)
 
-    # ── Daily report stats ────────────────────────────────────
-    total_revenue = sum(s.get('total_amount', 0) for s in day_sales)
+    # ── Daily stats ───────────────────────────────────────────
+    total_revenue = sum(float(s.get('total_amount', 0)) for s in day_sales)
     total_profit  = sum(
-        sum(i.get('line_profit', 0) for i in s.get('items', []))
+        sum(float(i.get('line_profit', 0)) for i in s.get('items', []))
         for s in day_sales
     )
 
-    # Payment method breakdown
     breakdown = {'cash': 0.0, 'mpesa': 0.0, 'credit': 0.0}
     for s in day_sales:
         method = s.get('payment_method', 'cash').lower()
-        breakdown[method] = breakdown.get(method, 0) + s.get('total_amount', 0)
+        breakdown[method] = breakdown.get(method, 0.0) + float(s.get('total_amount', 0))
 
-    # Low stock alerts (threshold: current_quantity < min_stock or < 5)
-    low_stock = list(current_app.db.products.find({
-        **query,
-        "$expr": {"$lt": ["$current_quantity", {"$ifNull": ["$min_stock", 5]}]}
-    }).sort("current_quantity", 1))
+    # ── Low stock alerts ──────────────────────────────────────
+    try:
+        low_stock = list(current_app.db.products.find({
+            **query,
+            "$expr": {"$lt": ["$current_quantity", {"$ifNull": ["$min_stock", 5]}]}
+        }).sort("current_quantity", 1))
+    except Exception:
+        low_stock = []
 
     grouped = group_by_business(all_sales, current_app.db) if is_super_admin else None
 
@@ -99,10 +97,10 @@ def index():
                            sales=all_sales,
                            grouped=grouped,
                            is_super_admin=is_super_admin,
-                           # Daily report
                            day_sales=day_sales,
                            selected_date=selected_date.strftime('%Y-%m-%d'),
                            selected_date_display=selected_date.strftime('%d %B %Y'),
+                           printed_at=datetime.utcnow().strftime('%d %b %Y %H:%M'),
                            total_revenue=total_revenue,
                            total_profit=round(total_profit, 2),
                            breakdown=breakdown,
