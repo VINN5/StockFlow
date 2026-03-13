@@ -208,13 +208,13 @@
           <tbody>
             {% for sale in day_sales %}
             {% set sale_profit = namespace(val=0) %}
-            {% for item in sale.items %}{% set sale_profit.val = sale_profit.val + item.line_profit %}{% endfor %}
+            {% for item in sale['items'] %}{% set sale_profit.val = sale_profit.val + item.line_profit %}{% endfor %}
             <tr>
               <td style="white-space:nowrap;">{{ sale.date.strftime('%H:%M') if sale.date else '—' }}</td>
               <td>{{ sale.cashier_name or '—' }}</td>
               <td>
                 <ul class="mb-0 ps-3 small">
-                  {% for item in sale.items %}
+                  {% for item in sale['items'] %}
                   <li>{{ item.quantity }} × {{ item.product_name }} @ KSh {{ "%.2f"|format(item.selling_price) }}</li>
                   {% endfor %}
                 </ul>
@@ -327,11 +327,11 @@
                   <tbody>
                     {% for sale in day_data.sales %}
                     {% set sp = namespace(val=0) %}
-                    {% for item in sale.items %}{% set sp.val = sp.val + item.line_profit %}{% endfor %}
+                    {% for item in sale['items'] %}{% set sp.val = sp.val + item.line_profit %}{% endfor %}
                     <tr>
                       <td style="white-space:nowrap;font-weight:600;">{{ sale.date.strftime('%H:%M') if sale.date else '—' }}</td>
                       <td>{{ sale.cashier_name or '—' }}</td>
-                      <td><ul class="hist-items">{% for item in sale.items %}<li>{{ item.quantity }} × <strong>{{ item.product_name }}</strong> @ KSh {{ "%.2f"|format(item.selling_price) }}</li>{% endfor %}</ul></td>
+                      <td><ul class="hist-items">{% for item in sale['items'] %}<li>{{ item.quantity }} × <strong>{{ item.product_name }}</strong> @ KSh {{ "%.2f"|format(item.selling_price) }}</li>{% endfor %}</ul></td>
                       <td style="font-weight:700;color:#059669;">KSh {{ "%.2f"|format(sale.total_amount) }}</td>
                       <td style="font-weight:600;color:#7c3aed;">KSh {{ "%.2f"|format(sp.val) }}</td>
                       <td><span class="badge bg-{{ 'success' if sale.payment_method=='cash' else 'warning text-dark' if sale.payment_method=='credit' else 'info' }}">{{ sale.payment_method|capitalize }}</span></td>
@@ -416,7 +416,7 @@
                 <tbody>
                   {% for sale in day_data.sales %}
                   {% set sp = namespace(val=0) %}
-                  {% for item in sale.items %}{% set sp.val = sp.val + item.line_profit %}{% endfor %}
+                  {% for item in sale['items'] %}{% set sp.val = sp.val + item.line_profit %}{% endfor %}
                   <tr>
                     <td style="white-space:nowrap;font-weight:600;">
                       {{ sale.date.strftime('%H:%M') if sale.date else '—' }}
@@ -424,7 +424,7 @@
                     <td>{{ sale.cashier_name or '—' }}</td>
                     <td>
                       <ul class="hist-items">
-                        {% for item in sale.items %}
+                        {% for item in sale['items'] %}
                         <li>{{ item.quantity }} × <strong>{{ item.product_name }}</strong> @ KSh {{ "%.2f"|format(item.selling_price) }}</li>
                         {% endfor %}
                       </ul>
