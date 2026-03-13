@@ -1,0 +1,129 @@
+{#
+  Reusable import/export toolbar + duplicate resolution modal.
+  Usage: {% from 'import_export_ui.html' import import_export_bar, duplicates_modal %}
+
+  import_export_bar(export_url, import_url, resolve_url, template_name)
+  duplicates_modal(pending_duplicates, resolve_url, entity_label)
+#}
+
+{% macro import_export_bar(export_url, import_url, template_filename=None) %}
+<div class="d-flex flex-wrap gap-2 align-items-center">
+
+  {# Export button #}
+  <a href="{{ export_url }}" class="btn btn-outline-success btn-sm">
+    <i class="fas fa-file-excel me-1"></i>Export Excel
+  </a>
+
+  {# Template download if provided #}
+  {% if template_filename %}
+  <a href="{{ url_for('static', filename='templates/' + template_filename) }}"
+     class="btn btn-outline-secondary btn-sm">
+    <i class="fas fa-download me-1"></i>Download Template
+  </a>
+  {% endif %}
+
+  {# Import trigger #}
+  <button class="btn btn-outline-primary btn-sm"
+          onclick="document.getElementById('excelFileInput').click()">
+    <i class="fas fa-file-upload me-1"></i>Import Excel
+  </button>
+
+  {# Hidden file input + auto-submit form #}
+  <form id="importForm" method="POST" action="{{ import_url }}" enctype="multipart/form-data" class="d-none">
+    <input type="file" id="excelFileInput" name="excel_file" accept=".xlsx"
+           onchange="document.getElementById('importForm').submit()">
+  </form>
+</div>
+{% endmacro %}
+
+
+{% macro duplicates_modal(pending_duplicates, resolve_url, entity_label='item') %}
+{% if pending_duplicates %}
+<div class="modal fade show d-block" id="duplicatesModal" tabindex="-1"
+     style="background:rgba(0,0,0,.5);">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title text-dark">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          {{ pending_duplicates|length }} Duplicate {{ entity_label }}{{ 's' if pending_duplicates|length != 1 }} Found
+        </h5>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">
+          These {{ entity_label }}s already exist in the system. Choose what to do with each one.
+          <strong>Skipped items keep their existing data unchanged.</strong>
+        </p>
+        <form method="POST" action="{{ resolve_url }}">
+          {% for dup in pending_duplicates %}
+          {% set eid = dup.existing_id %}
+          <input type="hidden" name="data_{{ eid }}" value="{{ dup.data | tojson }}">
+          <div class="card mb-3 border-warning">
+            <div class="card-body py-2">
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                  <strong>{{ dup.name }}</strong>
+                  <span class="badge bg-secondary ms-2">Row {{ dup.row }}</span>
+                  <div class="small text-muted mt-1">
+                    {% for k, v in dup.data.items() %}
+                    {% if v %}{{ k }}: <em>{{ v }}</em>{% if not loop.last %} &bull; {% endif %}{% endif %}
+                    {% endfor %}
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio"
+                           name="action_{{ eid }}" value="overwrite"
+                           id="ow_{{ eid }}">
+                    <label class="form-check-label text-danger fw-bold" for="ow_{{ eid }}">
+                      Overwrite
+                    </label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio"
+                           name="action_{{ eid }}" value="skip"
+                           id="sk_{{ eid }}" checked>
+                    <label class="form-check-label text-success fw-bold" for="sk_{{ eid }}">
+                      Skip
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-check me-1"></i>Confirm Choices
+            </button>
+            <button type="button" class="btn btn-secondary"
+                    onclick="document.getElementById('duplicatesModal').remove()">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endmacro %}
+
+
+{% macro import_summary_alert(import_summary) %}
+{% if import_summary %}
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+  <i class="fas fa-info-circle me-2"></i>
+  <strong>Import Summary:</strong>
+  {{ import_summary.inserted|length }} new record(s) added.
+  {% if import_summary.errors %}
+    {{ import_summary.errors|length }} error(s):
+    <ul class="mb-0 mt-1">
+      {% for e in import_summary.errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+{% endmacro %}

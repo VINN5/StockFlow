@@ -5,9 +5,14 @@
     <h1 class="mb-4">Purchase History</h1>
 
     {% if not is_super_admin %}
-    <a href="/purchases/new" class="btn btn-primary mb-4">
-        <i class="fas fa-plus me-2"></i>Record New Purchase
-    </a>
+    <div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+        <a href="/purchases/new" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Record New Purchase
+        </a>
+        <a href="{{ url_for('purchases.export') }}" class="btn btn-outline-success">
+            <i class="fas fa-file-excel me-1"></i>Export Excel
+        </a>
+    </div>
     {% endif %}
 
     {% if is_super_admin %}
@@ -27,21 +32,17 @@
                 <tbody>
                     {% for purchase in biz_purchases %}
                     <tr>
-                        <td data-label="Date">
-                            {% if purchase.date %}{{ purchase.date.strftime('%Y-%m-%d %H:%M') }}{% else %}Unknown{% endif %}
-                        </td>
-                        <td data-label="Supplier">{{ purchase.supplier_name or 'Unknown' }}</td>
-                        <td data-label="Items">
+                        <td>{{ purchase.date.strftime('%Y-%m-%d %H:%M') if purchase.date else 'Unknown' }}</td>
+                        <td>{{ purchase.supplier_name or 'Unknown' }}</td>
+                        <td>
                             <ul class="mb-0 ps-3 small">
                                 {% for item in purchase.items %}
                                 <li>{{ item.quantity or 0 }} × {{ item.product_name or 'Unknown' }} @ KSh {{ "%.2f"|format(item.cost_price or 0.0) }}</li>
-                                {% else %}
-                                <li class="text-muted">No items</li>
-                                {% endfor %}
+                                {% else %}<li class="text-muted">No items</li>{% endfor %}
                             </ul>
                         </td>
-                        <td data-label="Total Cost"><strong>KSh {{ "%.2f"|format(purchase.total_cost or 0.0) }}</strong></td>
-                        <td data-label="Actions">
+                        <td><strong>KSh {{ "%.2f"|format(purchase.total_cost or 0.0) }}</strong></td>
+                        <td>
                             <a href="/purchases/receipt/{{ purchase._id|string }}" class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-receipt me-1"></i>Receipt
                             </a>
@@ -65,23 +66,17 @@
             <tbody>
                 {% for purchase in purchases %}
                 <tr>
-                    <td data-label="Date">
-                        {% if purchase.date %}{{ purchase.date.strftime('%Y-%m-%d %H:%M') }}{% else %}Unknown Date{% endif %}
-                    </td>
-                    <td data-label="Supplier">{{ purchase.supplier_name or 'Unknown Supplier' }}</td>
-                    <td data-label="Items">
+                    <td>{{ purchase.date.strftime('%Y-%m-%d %H:%M') if purchase.date else 'Unknown Date' }}</td>
+                    <td>{{ purchase.supplier_name or 'Unknown Supplier' }}</td>
+                    <td>
                         <ul class="mb-0 ps-3 small">
-                            {% if purchase.items is iterable and purchase.items %}
                             {% for item in purchase.items %}
                             <li>{{ item.quantity or 0 }} × {{ item.product_name or 'Unknown' }} @ KSh {{ "%.2f"|format(item.cost_price or 0.0) }}</li>
-                            {% endfor %}
-                            {% else %}
-                            <li class="text-muted">No items</li>
-                            {% endif %}
+                            {% else %}<li class="text-muted">No items</li>{% endfor %}
                         </ul>
                     </td>
-                    <td data-label="Total Cost"><strong>KSh {{ "%.2f"|format(purchase.total_cost or 0.0) }}</strong></td>
-                    <td data-label="Actions">
+                    <td><strong>KSh {{ "%.2f"|format(purchase.total_cost or 0.0) }}</strong></td>
+                    <td>
                         <a href="/purchases/receipt/{{ purchase._id|string }}" class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-receipt me-1"></i>Receipt
                         </a>

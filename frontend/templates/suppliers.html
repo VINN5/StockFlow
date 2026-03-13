@@ -1,19 +1,29 @@
 {% extends "base.html" %}
+{% from 'import_export_ui.html' import import_export_bar, duplicates_modal, import_summary_alert %}
 {% block title %}Suppliers - StockFlow{% endblock %}
 {% block content %}
 <div class="container-fluid mt-4 px-3">
     <h1 class="mb-4">Suppliers</h1>
 
+    {{ import_summary_alert(import_summary) }}
+    {{ duplicates_modal(pending_duplicates, url_for('suppliers.resolve_duplicates'), 'supplier') }}
+
     <div class="row mb-3 g-2 align-items-center">
-        <div class="col-12 col-sm-7 col-md-6">
+        <div class="col-12 col-sm-5 col-md-5">
             <input type="text" id="searchInput" class="form-control form-control-lg"
                    placeholder="Search by supplier name..." onkeyup="searchSuppliers()">
         </div>
         {% if not is_super_admin %}
-        <div class="col-12 col-sm-5 col-md-6 text-sm-end">
-            <button class="btn btn-primary btn-lg w-100 w-sm-auto" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-                <i class="fas fa-plus me-2"></i>Add New Supplier
-            </button>
+        <div class="col-12 col-sm-7 col-md-7">
+            <div class="d-flex flex-wrap gap-2 justify-content-sm-end align-items-center">
+                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                    <i class="fas fa-plus me-2"></i>Add New Supplier
+                </button>
+                {{ import_export_bar(
+                    url_for('suppliers.export'),
+                    url_for('suppliers.import_excel')
+                ) }}
+            </div>
         </div>
         {% endif %}
     </div>
@@ -30,10 +40,7 @@
         <div class="table-responsive">
             <table class="table table-hover align-middle table-card-mobile">
                 <thead class="table-dark">
-                    <tr>
-                        <th>Supplier Name</th><th>Contact Person</th><th>Phone</th>
-                        <th>Email</th><th>Address</th><th>Actions</th>
-                    </tr>
+                    <tr><th>Supplier Name</th><th>Contact Person</th><th>Phone</th><th>Email</th><th>Address</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                     {% for supplier in biz_suppliers %}
@@ -44,13 +51,9 @@
                         <td data-label="Email">{{ supplier.email or '—' }}</td>
                         <td data-label="Address">{{ supplier.address or '—' }}</td>
                         <td data-label="Actions">
-                            <a href="/suppliers/edit/{{ supplier._id }}" class="btn btn-sm btn-warning">
-                                <i class="fas fa-edit"></i>
-                            </a>
+                            <a href="/suppliers/edit/{{ supplier._id }}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
                             <a href="/suppliers/delete/{{ supplier._id }}" class="btn btn-sm btn-danger"
-                               onclick="return confirm('Delete {{ supplier.name }}?')">
-                                <i class="fas fa-trash"></i>
-                            </a>
+                               onclick="return confirm('Delete {{ supplier.name }}?')"><i class="fas fa-trash"></i></a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -66,10 +69,7 @@
     <div class="table-responsive">
         <table class="table table-hover align-middle table-card-mobile" id="suppliersTable">
             <thead class="table-dark">
-                <tr>
-                    <th>Supplier Name</th><th>Contact Person</th><th>Phone</th>
-                    <th>Email</th><th>Address</th><th>Actions</th>
-                </tr>
+                <tr><th>Supplier Name</th><th>Contact Person</th><th>Phone</th><th>Email</th><th>Address</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 {% for supplier in suppliers %}
@@ -80,13 +80,9 @@
                     <td data-label="Email">{{ supplier.email or '—' }}</td>
                     <td data-label="Address">{{ supplier.address or '—' }}</td>
                     <td data-label="Actions">
-                        <a href="/suppliers/edit/{{ supplier._id }}" class="btn btn-sm btn-warning">
-                            <i class="fas fa-edit"></i>
-                        </a>
+                        <a href="/suppliers/edit/{{ supplier._id }}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
                         <a href="/suppliers/delete/{{ supplier._id }}" class="btn btn-sm btn-danger"
-                           onclick="return confirm('Delete {{ supplier.name }}?')">
-                            <i class="fas fa-trash"></i>
-                        </a>
+                           onclick="return confirm('Delete {{ supplier.name }}?')"><i class="fas fa-trash"></i></a>
                     </td>
                 </tr>
                 {% else %}
@@ -160,9 +156,8 @@ function searchSuppliers() {
         row.style.display = nameCell.includes(input) ? '' : 'none';
         if (nameCell.includes(input)) visibleCount++;
     }
-    const nr = document.getElementById('noResultsRow');
+    document.getElementById('noResultsRow').style.display = (input && visibleCount === 0) ? '' : 'none';
     const er = document.getElementById('emptyRow');
-    if (nr) nr.style.display = (input && visibleCount === 0) ? '' : 'none';
     if (er) er.style.display = (!input && visibleCount === 0) ? '' : 'none';
 }
 </script>

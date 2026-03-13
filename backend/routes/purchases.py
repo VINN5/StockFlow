@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, jsonify
 from bson.objectid import ObjectId
 from datetime import datetime
+from .excel_io import export_purchases
 
 bp = Blueprint('purchases', __name__, url_prefix='/purchases')
 
@@ -28,21 +29,14 @@ def group_by_business(items, db):
 
 
 def enrich_purchases(purchases, db, query):
-    """Attach supplier_name and product_name to each purchase.
-    query is passed in from the route so session is never accessed here."""
     suppliers = {str(s['_id']): s['name'] for s in db.suppliers.find(query)}
-    products = {str(p['_id']): p['name'] for p in db.products.find(query)}
-
+    products  = {str(p['_id']): p['name'] for p in db.products.find(query)}
     for purchase in purchases:
         sid = str(purchase['supplier_id']) if purchase.get('supplier_id') else ''
         purchase['supplier_name'] = suppliers.get(sid, 'Unknown Supplier')
-
-        enriched_items = []
-        for item in list(purchase.get('items', [])):
+        for item in purchase.get('items', []):
             pid = str(item.get('product_id', '')) if item.get('product_id') else ''
             item['product_name'] = products.get(pid, 'Unknown Product')
-            enriched_items.append(item)
-        purchase['items'] = enriched_items
 
 
 @bp.route('/')
@@ -52,10 +46,8 @@ def index():
 
     is_super_admin = session.get('role') == 'super_admin'
     query = get_business_query()
-
     purchases = list(current_app.db.purchases.find(query).sort("date", -1))
     enrich_purchases(purchases, current_app.db, query)
-
     grouped = group_by_business(purchases, current_app.db) if is_super_admin else None
 
     return render_template('purchases.html',
@@ -98,24 +90,17 @@ def add():
                 return jsonify({'success': False, 'message': 'Invalid business context'}), 400
 
     result = current_app.db.purchases.insert_one(purchase)
-    purchase_id = str(result.inserted_id)
-
-    receipt_url = url_for('purchases.receipt', purchase_id=purchase_id)
-    return jsonify({
-        'success': True,
-        'message': 'Purchase recorded successfully!',
-        'redirect': receipt_url
-    })
+    receipt_url = url_for('purchases.receipt', purchase_id=str(result.inserted_id))
+    return jsonify({'success': True, 'message': 'Purchase recorded successfully!', 'redirect': receipt_url})
 
 
 @bp.route('/new')
 def new():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-
     query = get_business_query()
     suppliers = list(current_app.db.suppliers.find(query))
-    products = list(current_app.db.products.find(query))
+    products  = list(current_app.db.products.find(query))
     return render_template('purchase_new.html', suppliers=suppliers, products=products)
 
 
@@ -123,7 +108,6 @@ def new():
 def receipt(purchase_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
-
     try:
         obj_id = ObjectId(purchase_id)
     except Exception:
@@ -152,7 +136,7 @@ def receipt(purchase_id):
             supplier_name = supplier.get('name', 'Unknown Supplier')
 
     enriched_items = []
-    for item in list(purchase.get('items', [])):
+    for item in purchase.get('items', []):
         product_name = 'Unknown Product'
         if item.get('product_id'):
             product = current_app.db.products.find_one(ObjectId(item['product_id']))
@@ -165,12 +149,21 @@ def receipt(purchase_id):
             'line_total': item.get('quantity', 0) * item.get('cost_price', 0.0)
         })
 
-    context = {
-        'purchase_id': str(purchase['_id']),
-        'date_formatted': purchase['date'].strftime('%d %B %Y, %H:%M') if 'date' in purchase else 'Unknown Date',
-        'supplier_name': supplier_name,
-        'total_cost': purchase.get('total_cost', 0.0),
-        'items': enriched_items,
-        'business_name': session.get('business_name', 'StockFlow Business')
-    }
-    return render_template('purchase_receipt.html', **context)
+    return render_template('purchase_receipt.html',
+                           purchase_id=str(purchase['_id']),
+                           date_formatted=purchase['date'].strftime('%d %B %Y, %H:%M') if 'date' in purchase else 'Unknown',
+                           supplier_name=supplier_name,
+                           total_cost=purchase.get('total_cost', 0.0),
+                           items=enriched_items,
+                           business_name=session.get('business_name', 'StockFlow Business'))
+
+
+# ── Excel export ──────────────────────────────────────────────────────────────
+@bp.route('/export')
+def export():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    query = get_business_query()
+    purchases = list(current_app.db.purchases.find(query).sort("date", -1))
+    enrich_purchases(purchases, current_app.db, query)
+    return export_purchases(purchases)

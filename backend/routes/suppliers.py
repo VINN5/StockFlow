@@ -2,8 +2,11 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from ..models.supplier import Supplier
 from bson.objectid import ObjectId
 from datetime import datetime
+from .excel_io import export_suppliers, import_suppliers, resolve_supplier_duplicate
+import json
 
 bp = Blueprint('suppliers', __name__, url_prefix='/suppliers')
+
 
 def get_business_query():
     if session.get('role') == 'super_admin':
@@ -12,9 +15,20 @@ def get_business_query():
     if business_id:
         try:
             return {"business_id": ObjectId(business_id)}
-        except:
+        except Exception:
             return {}
     return {}
+
+
+def get_business_id_obj():
+    if session.get('role') == 'super_admin':
+        return None
+    bid = session.get('business_id')
+    try:
+        return ObjectId(bid) if bid else None
+    except Exception:
+        return None
+
 
 def group_by_business(items, db):
     businesses = {str(b['_id']): b['name'] for b in db.businesses.find()}
@@ -25,6 +39,7 @@ def group_by_business(items, db):
         grouped.setdefault(bname, []).append(item)
     return grouped
 
+
 @bp.route('/')
 def index():
     if 'user_id' not in session:
@@ -33,26 +48,28 @@ def index():
     is_super_admin = session.get('role') == 'super_admin'
     query = get_business_query()
     suppliers = list(app.db.suppliers.find(query))
-
     grouped = group_by_business(suppliers, app.db) if is_super_admin else None
+
+    pending = session.pop('import_duplicates', None)
+    import_summary = session.pop('import_summary', None)
 
     return render_template('suppliers.html',
                            suppliers=suppliers,
                            grouped=grouped,
-                           is_super_admin=is_super_admin)
+                           is_super_admin=is_super_admin,
+                           pending_duplicates=pending,
+                           import_summary=import_summary)
+
 
 def build_supplier_dict(name, contact_person, phone, email, address):
     supplier = Supplier(name=name, contact_person=contact_person,
                         phone=phone, email=email, address=address)
     data = supplier.to_dict()
-    if session.get('role') != 'super_admin':
-        business_id = session.get('business_id')
-        if business_id:
-            try:
-                data['business_id'] = ObjectId(business_id)
-            except:
-                pass
+    bid_obj = get_business_id_obj()
+    if bid_obj:
+        data['business_id'] = bid_obj
     return data
+
 
 @bp.route('/add', methods=['POST'])
 def add():
@@ -83,14 +100,14 @@ def add():
     flash('Supplier added successfully!', 'success')
     return redirect(url_for('suppliers.index'))
 
+
 @bp.route('/edit/<supplier_id>', methods=['GET', 'POST'])
 def edit(supplier_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
-
     try:
         obj_id = ObjectId(supplier_id)
-    except:
+    except Exception:
         flash('Invalid supplier ID', 'danger')
         return redirect(url_for('suppliers.index'))
 
@@ -114,21 +131,77 @@ def edit(supplier_id):
 
     return render_template('supplier_edit.html', supplier=supplier)
 
+
 @bp.route('/delete/<supplier_id>')
 def delete(supplier_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
-
     try:
         obj_id = ObjectId(supplier_id)
-    except:
+    except Exception:
         flash('Invalid supplier ID', 'danger')
         return redirect(url_for('suppliers.index'))
 
     query = {"_id": obj_id, **get_business_query()}
     result = app.db.suppliers.delete_one(query)
-    if result.deleted_count:
-        flash('Supplier deleted', 'info')
+    flash('Supplier deleted' if result.deleted_count else 'Supplier not found or access denied',
+          'info' if result.deleted_count else 'danger')
+    return redirect(url_for('suppliers.index'))
+
+
+# ── Excel export ──────────────────────────────────────────────────────────────
+@bp.route('/export')
+def export():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    suppliers = list(app.db.suppliers.find(get_business_query()))
+    return export_suppliers(suppliers)
+
+
+# ── Excel import ──────────────────────────────────────────────────────────────
+@bp.route('/import', methods=['POST'])
+def import_excel():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    file = request.files.get('excel_file')
+    if not file or not file.filename.endswith('.xlsx'):
+        flash('Please upload a valid .xlsx file', 'danger')
+        return redirect(url_for('suppliers.index'))
+
+    bid_obj = get_business_id_obj()
+    inserted, duplicates, errors = import_suppliers(file, app.db, bid_obj)
+
+    summary = {'inserted': inserted, 'errors': errors}
+    if duplicates:
+        session['import_duplicates'] = duplicates
+        session['import_summary'] = summary
+        flash(f'Import paused: {len(duplicates)} duplicate(s) found. Please review below.', 'warning')
     else:
-        flash('Supplier not found or access denied', 'danger')
+        flash(f'Import complete: {len(inserted)} added, {len(errors)} error(s).', 'success' if not errors else 'warning')
+        for e in errors:
+            flash(e, 'danger')
+
+    return redirect(url_for('suppliers.index'))
+
+
+@bp.route('/import/resolve', methods=['POST'])
+def resolve_duplicates():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    overwritten = skipped = 0
+    for key, action in request.form.items():
+        if key.startswith('action_'):
+            existing_id = key[len('action_'):]
+            try:
+                data = json.loads(request.form.get(f'data_{existing_id}', '{}'))
+            except Exception:
+                continue
+            if resolve_supplier_duplicate(app.db, existing_id, data, action):
+                overwritten += 1
+            else:
+                skipped += 1
+
+    flash(f'Duplicates resolved: {overwritten} updated, {skipped} skipped.', 'success')
     return redirect(url_for('suppliers.index'))

@@ -1,25 +1,34 @@
 {% extends "base.html" %}
+{% from 'import_export_ui.html' import import_export_bar, duplicates_modal, import_summary_alert %}
 {% block title %}Products - StockFlow{% endblock %}
 {% block content %}
 <div class="container-fluid mt-4 px-3">
     <h1 class="mb-4">Products</h1>
 
+    {{ import_summary_alert(import_summary) }}
+    {{ duplicates_modal(pending_duplicates, url_for('products.resolve_duplicates'), 'product') }}
+
     <div class="row mb-3 g-2 align-items-center">
-        <div class="col-12 col-sm-7 col-md-6">
+        <div class="col-12 col-sm-5 col-md-5">
             <input type="text" id="searchInput" class="form-control form-control-lg"
                    placeholder="Search by product name..." onkeyup="searchProducts()">
         </div>
         {% if not is_super_admin %}
-        <div class="col-12 col-sm-5 col-md-6 text-sm-end">
-            <button class="btn btn-primary btn-lg w-100 w-sm-auto" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                <i class="fas fa-plus me-2"></i>Add New Product
-            </button>
+        <div class="col-12 col-sm-7 col-md-7">
+            <div class="d-flex flex-wrap gap-2 justify-content-sm-end align-items-center">
+                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                    <i class="fas fa-plus me-2"></i>Add New Product
+                </button>
+                {{ import_export_bar(
+                    url_for('products.export'),
+                    url_for('products.import_excel')
+                ) }}
+            </div>
         </div>
         {% endif %}
     </div>
 
     {% if is_super_admin %}
-    {# ── Super Admin: grouped by business ── #}
     {% for biz_name, biz_products in grouped.items() %}
     <div class="mb-5">
         <div class="d-flex align-items-center mb-3 gap-2">
@@ -47,13 +56,9 @@
                         <td data-label="Purchase Price">KSh {{ "%.2f"|format(product.purchase_price) }}</td>
                         <td data-label="Selling Price">KSh {{ "%.2f"|format(product.selling_price) }}</td>
                         <td data-label="Actions">
-                            <a href="/products/edit/{{ product._id }}" class="btn btn-sm btn-warning">
-                                <i class="fas fa-edit"></i>
-                            </a>
+                            <a href="/products/edit/{{ product._id }}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
                             <a href="/products/delete/{{ product._id }}" class="btn btn-sm btn-danger"
-                               onclick="return confirm('Delete {{ product.name }}?')">
-                                <i class="fas fa-trash"></i>
-                            </a>
+                               onclick="return confirm('Delete {{ product.name }}?')"><i class="fas fa-trash"></i></a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -66,7 +71,6 @@
     {% endfor %}
 
     {% else %}
-    {# ── Branch Admin / Cashier: normal view ── #}
     <div class="table-responsive">
         <table class="table table-hover align-middle table-card-mobile" id="productsTable">
             <thead class="table-dark">
@@ -88,13 +92,9 @@
                     </td>
                     <td data-label="Selling Price">KSh {{ "%.2f"|format(product.selling_price) }}</td>
                     <td data-label="Actions">
-                        <a href="/products/edit/{{ product._id }}" class="btn btn-sm btn-warning">
-                            <i class="fas fa-edit"></i>
-                        </a>
+                        <a href="/products/edit/{{ product._id }}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
                         <a href="/products/delete/{{ product._id }}" class="btn btn-sm btn-danger"
-                           onclick="return confirm('Delete {{ product.name }}?')">
-                            <i class="fas fa-trash"></i>
-                        </a>
+                           onclick="return confirm('Delete {{ product.name }}?')"><i class="fas fa-trash"></i></a>
                     </td>
                 </tr>
                 {% else %}
@@ -112,7 +112,6 @@
 </div>
 
 {% if not is_super_admin %}
-<!-- Add Product Modal -->
 <div class="modal fade" id="addProductModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
@@ -188,9 +187,8 @@ function searchProducts() {
         row.style.display = nameCell.includes(input) ? '' : 'none';
         if (nameCell.includes(input)) visibleCount++;
     }
-    const nr = document.getElementById('noResultsRow');
+    document.getElementById('noResultsRow').style.display = (input && visibleCount === 0) ? '' : 'none';
     const er = document.getElementById('emptyRow');
-    if (nr) nr.style.display = (input && visibleCount === 0) ? '' : 'none';
     if (er) er.style.display = (!input && visibleCount === 0) ? '' : 'none';
 }
 </script>

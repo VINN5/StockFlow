@@ -1,21 +1,29 @@
 {% extends "base.html" %}
+{% from 'import_export_ui.html' import import_export_bar, duplicates_modal, import_summary_alert %}
 {% block title %}Clients - StockFlow{% endblock %}
 {% block content %}
 <div class="container-fluid mt-4 px-3">
     <h1 class="mb-4">Client Management</h1>
 
+    {{ import_summary_alert(import_summary) }}
+    {{ duplicates_modal(pending_duplicates, url_for('clients.resolve_duplicates'), 'client') }}
+
     {% if not is_super_admin %}
-    <div class="alert alert-info mb-4">
+    <div class="alert alert-info mb-3">
         <i class="fas fa-info-circle me-2"></i>
         <strong>Verify KRA PIN:</strong>
-        <a href="https://itax.kra.go.ke/KRA-Portal/pinChecker.htm" target="_blank" class="alert-link d-inline-block text-break">
+        <a href="https://itax.kra.go.ke/KRA-Portal/pinChecker.htm" target="_blank" class="alert-link">
             itax.kra.go.ke <i class="fas fa-external-link-alt ms-1"></i>
         </a>
     </div>
 
     <div class="card shadow mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="mb-0">Add New Client</h5>
+            {{ import_export_bar(
+                url_for('clients.export'),
+                url_for('clients.import_excel')
+            ) }}
         </div>
         <div class="card-body">
             <form method="POST" action="{{ url_for('clients.add') }}">
@@ -61,10 +69,10 @@
                 <tbody>
                     {% for client in biz_clients %}
                     <tr>
-                        <td data-label="Name"><strong>{{ client.name }}</strong></td>
-                        <td data-label="Contact">{{ client.contact or '—' }}</td>
-                        <td data-label="KRA PIN">{{ client.kra_pin or '—' }}</td>
-                        <td data-label="Balance">
+                        <td><strong>{{ client.name }}</strong></td>
+                        <td>{{ client.contact or '—' }}</td>
+                        <td>{{ client.kra_pin or '—' }}</td>
+                        <td>
                             {% if client.balance > 0 %}
                             <span class="badge bg-danger">KSh {{ "%.2f"|format(client.balance) }}</span>
                             {% elif client.balance < 0 %}
@@ -89,20 +97,17 @@
         <table class="table table-striped table-card-mobile">
             <thead class="table-dark">
                 <tr>
-                    <th>Name</th>
-                    <th>Contact</th>
-                    <th>KRA PIN</th>
-                    <th>Balance (Credit Owed)</th>
+                    <th>Name</th><th>Contact</th><th>KRA PIN</th><th>Balance (Credit Owed)</th>
                     {% if session.role == 'admin' %}<th>Actions</th>{% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for client in clients %}
                 <tr>
-                    <td data-label="Name"><strong>{{ client.name }}</strong></td>
-                    <td data-label="Contact">{{ client.contact or '—' }}</td>
-                    <td data-label="KRA PIN">{{ client.kra_pin or '—' }}</td>
-                    <td data-label="Balance">
+                    <td><strong>{{ client.name }}</strong></td>
+                    <td>{{ client.contact or '—' }}</td>
+                    <td>{{ client.kra_pin or '—' }}</td>
+                    <td>
                         {% if client.balance > 0 %}
                         <span class="badge bg-danger">KSh {{ "%.2f"|format(client.balance) }}</span>
                         {% elif client.balance < 0 %}
@@ -112,7 +117,7 @@
                         {% endif %}
                     </td>
                     {% if session.role == 'admin' %}
-                    <td data-label="Actions">
+                    <td>
                         {% if client.balance > 0 %}
                         <a href="{{ url_for('payments.request_payment', client_id=client._id) }}"
                            class="btn btn-sm btn-warning">
@@ -127,7 +132,7 @@
                 {% else %}
                 <tr>
                     <td colspan="{{ 5 if session.role == 'admin' else 4 }}"
-                        class="text-center text-muted">No clients yet. Add one above!</td>
+                        class="text-center text-muted py-4">No clients yet. Add one above!</td>
                 </tr>
                 {% endfor %}
             </tbody>
