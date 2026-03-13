@@ -281,28 +281,82 @@
 
     {% if is_super_admin %}
     {# ── Super admin: grouped by business then by day ── #}
-    {% for biz_name, biz_days in history_by_day.items() %}
-      <div class="mb-2">
+    {% if history_by_day %}
+      {% for biz_name, biz_days in history_by_day.items() %}
+      <div class="mb-4">
         <div style="font-size:.8rem;font-weight:700;padding:.5rem .25rem;color:#2563eb;border-bottom:2px solid #eff6ff;margin-bottom:.75rem;">
           <i class="fas fa-building me-1"></i>{{ biz_name }}
         </div>
         {% set current_month = namespace(val='') %}
         {% for day_key, day_data in biz_days.items() %}
-          {% set month_label = day_data.display[:8] %}{# e.g. "January" #}
-          {% if month_label != current_month.val %}
-            {% set current_month.val = month_label %}
+          {% if day_data.month_label != current_month.val %}
+            {% set current_month.val = day_data.month_label %}
             <div class="hist-month-label">{{ day_data.month_label }}</div>
           {% endif %}
-          {% include '_hist_day_block.html' ignore missing %}
-          {{ _hist_day(day_key, day_data, biz_name) }}
+
+          <div class="hist-section hist-day-block"
+               data-month="{{ day_data.month_key }}"
+               data-payments="{{ day_data.payments|join(',') }}"
+               data-text="{{ day_data.search_text|lower }}">
+            <div class="hist-day-header" onclick="toggleDay(this)">
+              <div class="hist-day-left">
+                <div>
+                  <div class="hist-day-date">{{ day_data.display }}</div>
+                  <div class="hist-day-sub">{{ day_data.count }} transaction{{ 's' if day_data.count != 1 }}</div>
+                </div>
+                <div class="hist-day-pills">
+                  <span class="hist-pill hp-cnt"><i class="fas fa-receipt me-1"></i>{{ day_data.count }}</span>
+                  <span class="hist-pill hp-rev">KSh {{ "%.2f"|format(day_data.revenue) }}</span>
+                  <span class="hist-pill hp-prof">Profit KSh {{ "%.2f"|format(day_data.profit) }}</span>
+                  {% if day_data.breakdown.cash > 0 %}<span class="hist-pill hp-cash">💵 {{ "%.0f"|format(day_data.breakdown.cash) }}</span>{% endif %}
+                  {% if day_data.breakdown.mpesa > 0 %}<span class="hist-pill hp-mpesa">📱 {{ "%.0f"|format(day_data.breakdown.mpesa) }}</span>{% endif %}
+                  {% if day_data.breakdown.credit > 0 %}<span class="hist-pill hp-cred">📒 {{ "%.0f"|format(day_data.breakdown.credit) }}</span>{% endif %}
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.75rem;">
+                <button class="btn btn-sm btn-outline-secondary no-print"
+                  onclick="event.stopPropagation(); printDay('{{ day_key }}-{{ loop.index }}', '{{ day_data.display }}')"
+                  title="Print this day"><i class="fas fa-print"></i></button>
+                <i class="fas fa-chevron-down hist-chevron"></i>
+              </div>
+            </div>
+            <div class="hist-body" id="body-{{ day_key }}-{{ loop.index }}">
+              <div class="table-responsive">
+                <table class="hist-table" id="table-{{ day_key }}-{{ loop.index }}">
+                  <thead><tr><th>Time</th><th>Cashier</th><th>Items Sold</th><th>Revenue</th><th>Profit</th><th>Payment</th></tr></thead>
+                  <tbody>
+                    {% for sale in day_data.sales %}
+                    {% set sp = namespace(val=0) %}
+                    {% for item in sale.items %}{% set sp.val = sp.val + item.line_profit %}{% endfor %}
+                    <tr>
+                      <td style="white-space:nowrap;font-weight:600;">{{ sale.date.strftime('%H:%M') if sale.date else '—' }}</td>
+                      <td>{{ sale.cashier_name or '—' }}</td>
+                      <td><ul class="hist-items">{% for item in sale.items %}<li>{{ item.quantity }} × <strong>{{ item.product_name }}</strong> @ KSh {{ "%.2f"|format(item.selling_price) }}</li>{% endfor %}</ul></td>
+                      <td style="font-weight:700;color:#059669;">KSh {{ "%.2f"|format(sale.total_amount) }}</td>
+                      <td style="font-weight:600;color:#7c3aed;">KSh {{ "%.2f"|format(sp.val) }}</td>
+                      <td><span class="badge bg-{{ 'success' if sale.payment_method=='cash' else 'warning text-dark' if sale.payment_method=='credit' else 'info' }}">{{ sale.payment_method|capitalize }}</span></td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                  <tfoot><tr>
+                    <td colspan="3" style="text-align:right;">Day Totals</td>
+                    <td style="color:#059669;">KSh {{ "%.2f"|format(day_data.revenue) }}</td>
+                    <td style="color:#7c3aed;">KSh {{ "%.2f"|format(day_data.profit) }}</td>
+                    <td></td>
+                  </tr></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
         {% endfor %}
       </div>
+      {% endfor %}
     {% else %}
       <div class="text-center text-muted py-5">
         <i class="fas fa-receipt" style="font-size:2rem;opacity:.2;display:block;margin-bottom:.5rem"></i>
         No sales found across any business.
       </div>
-    {% endfor %}
+    {% endif %}
 
     {% else %}
     {# ── Branch view: grouped by day ── #}

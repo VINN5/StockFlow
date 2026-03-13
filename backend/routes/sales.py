@@ -1,6 +1,9 @@
 from flask import Blueprint, render_template, redirect, url_for, session, current_app, request
 from bson.objectid import ObjectId
 from datetime import datetime
+import traceback
+from .excel_io import export_sales
+from datetime import datetime
 from .excel_io import export_sales
 
 bp = Blueprint('sales', __name__, url_prefix='/sales')
@@ -109,9 +112,6 @@ def index():
 
     # ── Fetch all sales + day sales ───────────────────────────────────────────
     all_sales = list(current_app.db.sales.find(query).sort("date", -1))
-    day_sales = list(current_app.db.sales.find(
-        {**query, "date": {"$gte": day_start, "$lte": day_end}}
-    ).sort("date", 1))
 
     products = {str(p['_id']): p for p in current_app.db.products.find(query)}
 
@@ -119,6 +119,9 @@ def index():
     def enrich(sales_list):
         for sale in sales_list:
             for item in sale.get('items', []):
+                # Skip if already enriched
+                if 'product_name' in item:
+                    continue
                 pid     = str(item.get('product_id', ''))
                 product = products.get(pid, {})
                 cost    = float(product.get('purchase_price', 0))
@@ -131,7 +134,13 @@ def index():
         return sales_list
 
     all_sales = enrich(all_sales)
-    day_sales = enrich(day_sales)
+
+    # day_sales is a subset of all_sales — filter from memory, don't re-query
+    day_sales = [
+        s for s in all_sales
+        if s.get('date') and day_start <= s['date'] <= day_end
+    ]
+    # day_sales already enriched since they come from all_sales
 
     # ── Daily report stats ────────────────────────────────────────────────────
     total_revenue = sum(float(s.get('total_amount', 0)) for s in day_sales)
