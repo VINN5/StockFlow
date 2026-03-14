@@ -32,6 +32,15 @@ def enrich_purchases(purchases, db, query):
     suppliers = {str(s['_id']): s['name'] for s in db.suppliers.find(query)}
     products  = {str(p['_id']): p['name'] for p in db.products.find(query)}
     for purchase in purchases:
+        # Ensure date is always a datetime object
+        if isinstance(purchase.get('date'), str):
+            try:
+                purchase['date'] = datetime.fromisoformat(purchase['date'])
+            except Exception:
+                purchase['date'] = None
+        elif not isinstance(purchase.get('date'), datetime):
+            purchase['date'] = None
+
         sid = str(purchase['supplier_id']) if purchase.get('supplier_id') else ''
         purchase['supplier_name'] = suppliers.get(sid, 'Unknown Supplier')
         for item in purchase.get('items', []):
@@ -149,9 +158,19 @@ def receipt(purchase_id):
             'line_total': item.get('quantity', 0) * item.get('cost_price', 0.0)
         })
 
+    # Safe date formatting
+    purchase_date = purchase.get('date')
+    if isinstance(purchase_date, str):
+        try:
+            purchase_date = datetime.fromisoformat(purchase_date)
+        except Exception:
+            purchase_date = None
+
+    date_formatted = purchase_date.strftime('%d %B %Y, %H:%M') if purchase_date else 'Unknown'
+
     return render_template('purchase_receipt.html',
                            purchase_id=str(purchase['_id']),
-                           date_formatted=purchase['date'].strftime('%d %B %Y, %H:%M') if 'date' in purchase else 'Unknown',
+                           date_formatted=date_formatted,
                            supplier_name=supplier_name,
                            total_cost=purchase.get('total_cost', 0.0),
                            items=enriched_items,
