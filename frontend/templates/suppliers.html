@@ -2,163 +2,219 @@
 {% from 'import_export_ui.html' import import_export_bar, duplicates_modal, import_summary_alert %}
 {% block title %}Suppliers - StockFlow{% endblock %}
 {% block content %}
-<div class="container-fluid mt-4 px-3">
-    <h1 class="mb-4">Suppliers</h1>
+<style>
+  .sf-page-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.75rem; }
+  .sf-page-title  { font-size:1.5rem; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .sf-page-sub    { font-size:.82rem; color:#7d97ac; margin-top:.2rem; }
+  .sf-card        { background:#fff; border:1px solid #e8edf2; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04); overflow:hidden; }
 
-    {{ import_summary_alert(import_summary) }}
-    {{ duplicates_modal(pending_duplicates, url_for('suppliers.resolve_duplicates'), 'supplier') }}
+  .sf-toolbar { display:flex; flex-wrap:wrap; gap:.65rem; align-items:center; margin-bottom:1.25rem; }
+  .sf-search  {
+    flex:1; min-width:220px; max-width:340px;
+    border:1.5px solid #e2e8f0; border-radius:10px;
+    font-family:'DM Sans',sans-serif; font-size:.875rem;
+    padding:.62rem 1rem .62rem 2.5rem;
+    background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='%237d97ac'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") no-repeat .85rem center;
+    outline:none;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .sf-search:focus { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
 
-    <div class="row mb-3 g-2 align-items-center">
-        <div class="col-12 col-sm-5 col-md-5">
-            <input type="text" id="searchInput" class="form-control form-control-lg"
-                   placeholder="Search by supplier name..." onkeyup="searchSuppliers()">
-        </div>
-        {% if not is_super_admin %}
-        <div class="col-12 col-sm-7 col-md-7">
-            <div class="d-flex flex-wrap gap-2 justify-content-sm-end align-items-center">
-                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-                    <i class="fas fa-plus me-2"></i>Add New Supplier
-                </button>
-                {{ import_export_bar(
-                    url_for('suppliers.export'),
-                    url_for('suppliers.import_excel')
-                ) }}
-            </div>
-        </div>
-        {% endif %}
-    </div>
+  .biz-group-header {
+    display:flex; align-items:center; gap:.65rem;
+    padding:1.25rem 1.5rem .75rem;
+    border-bottom:1px solid #f0f4f8;
+  }
+  .biz-badge {
+    display:inline-flex; align-items:center; gap:.45rem;
+    background:#0d1b2a; color:rgba(255,255,255,.85);
+    border-radius:9px; padding:.35rem .8rem;
+    font-size:.78rem; font-weight:600;
+  }
+  .biz-count { font-size:.78rem; color:#7d97ac; font-weight:500; }
 
-    {% if is_super_admin %}
-    {% for biz_name, biz_suppliers in grouped.items() %}
-    <div class="mb-5">
-        <div class="d-flex align-items-center mb-3 gap-2">
-            <span class="badge bg-primary fs-6 px-3 py-2">
-                <i class="fas fa-building me-2"></i>{{ biz_name }}
-            </span>
-            <span class="badge bg-secondary">{{ biz_suppliers|length }} supplier{{ 's' if biz_suppliers|length != 1 }}</span>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle table-card-mobile">
-                <thead class="table-dark">
-                    <tr><th>Supplier Name</th><th>Contact Person</th><th>Phone</th><th>Email</th><th>Address</th><th>Actions</th></tr>
-                </thead>
-                <tbody>
-                    {% for supplier in biz_suppliers %}
-                    <tr>
-                        <td data-label="Name"><strong>{{ supplier.name }}</strong></td>
-                        <td data-label="Contact">{{ supplier.contact_person or '—' }}</td>
-                        <td data-label="Phone">{{ supplier.phone or '—' }}</td>
-                        <td data-label="Email">{{ supplier.email or '—' }}</td>
-                        <td data-label="Address">{{ supplier.address or '—' }}</td>
-                        <td data-label="Actions">
-                            <a href="/suppliers/edit/{{ supplier._id }}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
-                            <a href="/suppliers/delete/{{ supplier._id }}" class="btn btn-sm btn-danger"
-                               onclick="return confirm('Delete {{ supplier.name }}?')"><i class="fas fa-trash"></i></a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% else %}
-    <div class="alert alert-info">No suppliers found in any business.</div>
-    {% endfor %}
+  .action-btn {
+    width:30px; height:30px; border-radius:7px;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:.78rem; border:none; cursor:pointer;
+    transition:all .15s; text-decoration:none;
+  }
+  .btn-edit { background:#fef9c3; color:#92400e; }
+  .btn-edit:hover { background:#f59e0b; color:#fff; }
+  .btn-del  { background:#fef2f2; color:#ef4444; }
+  .btn-del:hover  { background:#ef4444; color:#fff; }
 
-    {% else %}
-    <div class="table-responsive">
-        <table class="table table-hover align-middle table-card-mobile" id="suppliersTable">
-            <thead class="table-dark">
-                <tr><th>Supplier Name</th><th>Contact Person</th><th>Phone</th><th>Email</th><th>Address</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-                {% for supplier in suppliers %}
-                <tr>
-                    <td data-label="Name"><strong>{{ supplier.name }}</strong></td>
-                    <td data-label="Contact">{{ supplier.contact_person or '—' }}</td>
-                    <td data-label="Phone">{{ supplier.phone or '—' }}</td>
-                    <td data-label="Email">{{ supplier.email or '—' }}</td>
-                    <td data-label="Address">{{ supplier.address or '—' }}</td>
-                    <td data-label="Actions">
-                        <a href="/suppliers/edit/{{ supplier._id }}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
-                        <a href="/suppliers/delete/{{ supplier._id }}" class="btn btn-sm btn-danger"
-                           onclick="return confirm('Delete {{ supplier.name }}?')"><i class="fas fa-trash"></i></a>
-                    </td>
-                </tr>
-                {% else %}
-                <tr id="emptyRow">
-                    <td colspan="6" class="text-center py-5 text-muted">No suppliers yet. Add one!</td>
-                </tr>
-                {% endfor %}
-                <tr id="noResultsRow" style="display:none">
-                    <td colspan="6" class="text-center py-5 text-muted">No suppliers found matching your search.</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
+  .sf-label { display:block; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#7d97ac; margin-bottom:.45rem; }
+  .sf-input { width:100%; border:1.5px solid #e2e8f0; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:.9rem; padding:.7rem 1rem; background:#fafbfc; color:#0d1b2a; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; appearance:none; }
+  .sf-input:focus { border-color:#f59e0b; background:#fff; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
+  .sf-modal .modal-content { border-radius:16px; border:none; box-shadow:0 24px 64px rgba(0,0,0,.15); overflow:hidden; }
+</style>
+
+<div class="sf-page-header">
+  <div>
+    <h1 class="sf-page-title">Suppliers</h1>
+    <div class="sf-page-sub">Manage your product suppliers and vendor contacts</div>
+  </div>
+  {% if not is_super_admin %}
+  <div style="display:flex;flex-wrap:wrap;gap:.65rem;align-items:center;">
+    <button class="btn btn-primary d-flex align-items-center gap-2"
+            data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+      <i class="fas fa-plus" style="font-size:.8rem;"></i> Add Supplier
+    </button>
+    {{ import_export_bar(url_for('suppliers.export'), url_for('suppliers.import_excel')) }}
+  </div>
+  {% endif %}
 </div>
 
+{{ import_summary_alert(import_summary) }}
+{{ duplicates_modal(pending_duplicates, url_for('suppliers.resolve_duplicates'), 'supplier') }}
+
 {% if not is_super_admin %}
-<div class="modal fade" id="addSupplierModal">
-    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
-        <div class="modal-content">
-            <form method="POST" action="{{ url_for('suppliers.add') }}">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="fas fa-truck me-2"></i>Add New Supplier</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-bold">Supplier Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" required>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-bold">Contact Person</label>
-                            <input type="text" name="contact_person" class="form-control">
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-bold">Phone</label>
-                            <input type="tel" name="phone" class="form-control">
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label fw-bold">Email</label>
-                            <input type="email" name="email" class="form-control">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-bold">Address</label>
-                            <textarea name="address" class="form-control" rows="3"></textarea>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Supplier</button>
-                </div>
-            </form>
-        </div>
+<div class="sf-toolbar">
+  <input type="text" id="searchInput" class="sf-search"
+         placeholder="Search suppliers…" onkeyup="searchSuppliers()">
+</div>
+{% endif %}
+
+{% if is_super_admin %}
+
+  {% for biz_name, biz_suppliers in grouped.items() %}
+  <div class="sf-card mb-4">
+    <div class="biz-group-header">
+      <div class="biz-badge"><i class="fas fa-building" style="font-size:.7rem;opacity:.6;"></i> {{ biz_name }}</div>
+      <span class="biz-count">{{ biz_suppliers|length }} supplier{{ 's' if biz_suppliers|length != 1 }}</span>
     </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle table-card-mobile mb-0">
+        <thead><tr><th>Supplier</th><th>Contact</th><th>Phone</th><th>Email</th><th>Address</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for s in biz_suppliers %}
+          <tr>
+            <td data-label="Supplier"><strong>{{ s.name }}</strong></td>
+            <td data-label="Contact" style="color:#7d97ac;">{{ s.contact_person or '—' }}</td>
+            <td data-label="Phone" style="font-family:'DM Mono',monospace;font-size:.83rem;">{{ s.phone or '—' }}</td>
+            <td data-label="Email" style="font-size:.855rem;">{{ s.email or '—' }}</td>
+            <td data-label="Address" style="font-size:.855rem;color:#7d97ac;">{{ s.address or '—' }}</td>
+            <td data-label="Actions">
+              <div style="display:flex;gap:.4rem;">
+                <a href="/suppliers/edit/{{ s._id }}" class="action-btn btn-edit" title="Edit"><i class="fas fa-edit"></i></a>
+                <a href="/suppliers/delete/{{ s._id }}" class="action-btn btn-del"
+                   onclick="return confirm('Delete {{ s.name }}?')" title="Delete"><i class="fas fa-trash"></i></a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info">No suppliers found in any business.</div>
+  {% endfor %}
+
+{% else %}
+
+  <div class="sf-card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle table-card-mobile mb-0" id="suppliersTable">
+        <thead><tr><th>Supplier</th><th>Contact</th><th>Phone</th><th>Email</th><th>Address</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for s in suppliers %}
+          <tr>
+            <td data-label="Supplier"><strong>{{ s.name }}</strong></td>
+            <td data-label="Contact" style="color:#7d97ac;">{{ s.contact_person or '—' }}</td>
+            <td data-label="Phone" style="font-family:'DM Mono',monospace;font-size:.83rem;">{{ s.phone or '—' }}</td>
+            <td data-label="Email" style="font-size:.855rem;">{{ s.email or '—' }}</td>
+            <td data-label="Address" style="font-size:.855rem;color:#7d97ac;">{{ s.address or '—' }}</td>
+            <td data-label="Actions">
+              <div style="display:flex;gap:.4rem;">
+                <a href="/suppliers/edit/{{ s._id }}" class="action-btn btn-edit" title="Edit"><i class="fas fa-edit"></i></a>
+                <a href="/suppliers/delete/{{ s._id }}" class="action-btn btn-del"
+                   onclick="return confirm('Delete {{ s.name }}?')" title="Delete"><i class="fas fa-trash"></i></a>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr id="emptyRow">
+            <td colspan="6">
+              <div style="text-align:center;padding:3rem 1rem;color:#7d97ac;">
+                <i class="fas fa-truck" style="font-size:2rem;opacity:.2;display:block;margin-bottom:.75rem;"></i>
+                No suppliers yet — add one!
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          <tr id="noResultsRow" style="display:none;">
+            <td colspan="6" style="text-align:center;padding:2rem;color:#7d97ac;">No suppliers match your search.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% endif %}
+
+{% if not is_super_admin %}
+<div class="modal fade sf-modal" id="addSupplierModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-sm-down">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('suppliers.add') }}">
+        <div class="modal-header" style="background:#0d1b2a;">
+          <h5 class="modal-title text-white d-flex align-items-center gap-2">
+            <i class="fas fa-truck" style="color:#f59e0b;font-size:.9rem;"></i> Add New Supplier
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="sf-label">Supplier Name <span style="color:#ef4444;">*</span></label>
+              <input type="text" name="name" class="sf-input" required placeholder="e.g., Fresh Farms Ltd">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="sf-label">Contact Person</label>
+              <input type="text" name="contact_person" class="sf-input" placeholder="Full name">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="sf-label">Phone</label>
+              <input type="tel" name="phone" class="sf-input" placeholder="e.g., 0712345678">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="sf-label">Email</label>
+              <input type="email" name="email" class="sf-input" placeholder="supplier@example.com">
+            </div>
+            <div class="col-12">
+              <label class="sf-label">Address</label>
+              <textarea name="address" class="sf-input" rows="2" placeholder="Physical address or P.O. Box"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="background:#f8fafc;">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Add Supplier</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 {% endif %}
 
 <script>
 function searchSuppliers() {
-    const input = document.getElementById('searchInput').value.toLowerCase();
-    const table = document.getElementById('suppliersTable');
-    if (!table) return;
-    const rows = table.getElementsByTagName('tr');
-    let visibleCount = 0;
-    for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (row.id === 'noResultsRow' || row.id === 'emptyRow') continue;
-        const nameCell = row.cells[0].textContent.toLowerCase();
-        row.style.display = nameCell.includes(input) ? '' : 'none';
-        if (nameCell.includes(input)) visibleCount++;
-    }
-    document.getElementById('noResultsRow').style.display = (input && visibleCount === 0) ? '' : 'none';
-    const er = document.getElementById('emptyRow');
-    if (er) er.style.display = (!input && visibleCount === 0) ? '' : 'none';
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const tbl = document.getElementById('suppliersTable');
+  if (!tbl) return;
+  const rows = tbl.querySelectorAll('tbody tr');
+  let vis = 0;
+  rows.forEach(r => {
+    if (r.id === 'noResultsRow' || r.id === 'emptyRow') return;
+    const match = r.cells[0].textContent.toLowerCase().includes(q);
+    r.style.display = match ? '' : 'none';
+    if (match) vis++;
+  });
+  document.getElementById('noResultsRow').style.display = (q && vis === 0) ? '' : 'none';
+  const er = document.getElementById('emptyRow');
+  if (er) er.style.display = (!q && vis === 0) ? '' : 'none';
 }
 </script>
 {% endblock %}

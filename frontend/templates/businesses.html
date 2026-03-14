@@ -1,102 +1,155 @@
-<!-- @ts-nocheck -->
 {% extends "base.html" %}
-
 {% block title %}Businesses - StockFlow{% endblock %}
-
 {% block content %}
-<div class="container-fluid mt-4 px-3">
-    <h1 class="mb-4 text-primary"><i class="fas fa-building me-2"></i>Business Management</h1>
+<style>
+  .sf-page-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.75rem; }
+  .sf-page-title  { font-size:1.5rem; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .sf-page-sub    { font-size:.82rem; color:#7d97ac; margin-top:.2rem; }
+  .sf-card        { background:#fff; border:1px solid #e8edf2; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04); overflow:hidden; }
+  .sf-label { display:block; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#7d97ac; margin-bottom:.45rem; }
+  .sf-input { width:100%; border:1.5px solid #e2e8f0; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:.9rem; padding:.72rem 1rem; background:#fafbfc; color:#0d1b2a; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; appearance:none; }
+  .sf-input:focus { border-color:#f59e0b; background:#fff; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
 
-    <!-- Create form -->
-    <div class="row mb-5">
-        <div class="col-12 col-lg-9">
-            <div class="card shadow border-0">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Create New Business & Branch Admin</h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('create_business') }}">
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <label class="form-label fw-bold">Business Name</label>
-                                <input type="text" name="business_name" class="form-control" placeholder="e.g., Thika Branch" required>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label fw-bold">Location</label>
-                                <input type="text" name="location" class="form-control" placeholder="e.g., Thika, Kenya" required>
-                            </div>
-                        </div>
-                        <hr class="my-3">
-                        <h6 class="text-primary mb-3">Branch Admin Account</h6>
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <label class="form-label fw-bold">Admin Username</label>
-                                <input type="text" name="admin_username" class="form-control" placeholder="e.g., thika_manager" required>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label fw-bold">Admin Password</label>
-                                <input type="password" name="admin_password" class="form-control" required>
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <button type="submit" class="btn btn-success btn-lg w-100 w-md-auto px-5">
-                                <i class="fas fa-save me-2"></i>Create Business & Admin
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+  /* create form */
+  .create-card {
+    background:#fff; border:1px solid #e8edf2; border-radius:16px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.05);
+    overflow:hidden; margin-bottom:2rem; max-width:820px;
+  }
+  .create-head {
+    background:#0d1b2a; padding:1.1rem 1.5rem;
+    display:flex; align-items:center; gap:.75rem;
+  }
+  .create-head-icon { width:36px; height:36px; background:rgba(245,158,11,.18); border-radius:9px; display:flex; align-items:center; justify-content:center; color:#f59e0b; }
+  .create-head-title { font-size:.95rem; font-weight:700; color:#fff; }
+  .create-head-sub   { font-size:.72rem; color:rgba(255,255,255,.35); }
+  .create-body { padding:1.5rem; }
 
-    <h3 class="text-primary mb-4"><i class="fas fa-list me-2"></i>Existing Businesses</h3>
+  .section-divider {
+    display:flex; align-items:center; gap:.75rem;
+    margin:1.25rem 0 1rem;
+    font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#7d97ac;
+  }
+  .section-divider::before, .section-divider::after { content:''; flex:1; height:1px; background:#e8edf2; }
 
-    {% if businesses %}
-    <div class="table-responsive">
-        <table class="table table-hover table-striped align-middle shadow-sm table-card-mobile">
-            <thead class="table-dark">
-                <tr>
-                    <th>Business Name</th>
-                    <th>Location</th>
-                    <th>Created</th>
-                    <th>Branch Admins</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in businesses %}
-                {% set biz = item.business %}
-                <tr>
-                    <td data-label="Business Name"><strong>{{ biz.name }}</strong></td>
-                    <td data-label="Location">{{ biz.location or '—' }}</td>
-                    <td data-label="Created">{{ biz.created_at.strftime('%b %d, %Y') }}</td>
-                    <td data-label="Admins">
-                        {% if item.admins %}
-                            {% for username in item.admins %}
-                            <span class="badge bg-primary me-1">{{ username }}</span>
-                            {% endfor %}
-                        {% else %}
-                            <em class="text-muted">No admin assigned</em>
-                        {% endif %}
-                    </td>
-                    <td data-label="Actions">
-                        <form method="POST" action="{{ url_for('delete_business', business_id=biz._id) }}"
-                              onsubmit="return confirm('Are you sure you want to delete \"{{ biz.name }}\"? This will also delete its branch admin(s). This action cannot be undone.');"
-                              style="display: inline;">
-                            <button type="submit" class="btn btn-danger btn-sm">
-                                <i class="fas fa-trash me-1"></i>Delete
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="alert alert-info shadow-sm">
-        <i class="fas fa-info-circle me-2"></i>No businesses created yet. Use the form above to add your first branch!
-    </div>
-    {% endif %}
+  /* biz list */
+  .biz-row {
+    display:grid; grid-template-columns:1fr auto;
+    align-items:center; gap:1rem;
+    padding:1rem 1.5rem; border-bottom:1px solid #f0f4f8;
+    transition:background .12s;
+  }
+  .biz-row:last-child { border-bottom:none; }
+  .biz-row:hover { background:#f8fafc; }
+  .biz-name { font-size:.9rem; font-weight:700; color:#0d1b2a; }
+  .biz-loc  { font-size:.75rem; color:#7d97ac; margin-top:.2rem; }
+  .biz-date { font-size:.72rem; color:#b3c5cf; margin-top:.2rem; font-family:'DM Mono',monospace; }
+  .biz-admins { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.5rem; }
+  .admin-pill { background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; border-radius:999px; font-size:.68rem; font-weight:700; padding:.15rem .6rem; }
+
+  .del-btn {
+    display:inline-flex; align-items:center; gap:.35rem;
+    background:#fef2f2; color:#ef4444; border:1.5px solid #fecaca;
+    border-radius:8px; font-family:'DM Sans',sans-serif;
+    font-size:.75rem; font-weight:600; padding:.38rem .75rem;
+    cursor:pointer; transition:all .15s; white-space:nowrap;
+  }
+  .del-btn:hover { background:#ef4444; color:#fff; border-color:#ef4444; }
+</style>
+
+<div class="sf-page-header">
+  <div>
+    <h1 class="sf-page-title">Business Management</h1>
+    <div class="sf-page-sub">Create and manage branch businesses and their admin accounts</div>
+  </div>
 </div>
+
+<!-- Create new business -->
+<div class="create-card">
+  <div class="create-head">
+    <div class="create-head-icon"><i class="fas fa-building" style="font-size:.85rem;"></i></div>
+    <div>
+      <div class="create-head-title">Create New Business</div>
+      <div class="create-head-sub">Sets up a new branch with a dedicated admin account</div>
+    </div>
+  </div>
+  <div class="create-body">
+    <form method="POST" action="{{ url_for('create_business') }}">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="sf-label">Business Name</label>
+          <input type="text" name="business_name" class="sf-input" placeholder="e.g., Thika Branch" required>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="sf-label">Location</label>
+          <input type="text" name="location" class="sf-input" placeholder="e.g., Thika, Kenya" required>
+        </div>
+      </div>
+
+      <div class="section-divider">Branch Admin Account</div>
+
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="sf-label">Admin Username</label>
+          <input type="text" name="admin_username" class="sf-input" placeholder="e.g., thika_manager" required>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="sf-label">Admin Password</label>
+          <input type="password" name="admin_password" class="sf-input" required placeholder="Strong password">
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem;">
+        <button type="submit" class="btn btn-success d-flex align-items-center gap-2" style="padding:.78rem 1.5rem;">
+          <i class="fas fa-plus" style="font-size:.8rem;"></i> Create Business &amp; Admin
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Existing businesses -->
+<div style="font-size:1rem;font-weight:700;letter-spacing:-.01em;margin-bottom:1rem;color:#0d1b2a;">
+  Existing Businesses
+  <span style="font-size:.75rem;font-weight:500;color:#7d97ac;margin-left:.5rem;">{{ businesses|length }} total</span>
+</div>
+
+{% if businesses %}
+<div class="sf-card">
+  {% for item in businesses %}
+  {% set biz = item.business %}
+  <div class="biz-row">
+    <div>
+      <div class="biz-name">{{ biz.name }}</div>
+      {% if biz.location %}
+      <div class="biz-loc"><i class="fas fa-map-marker-alt" style="font-size:.68rem;margin-right:.25rem;"></i>{{ biz.location }}</div>
+      {% endif %}
+      <div class="biz-date">Created {{ biz.created_at.strftime('%d %b %Y') }}</div>
+      {% if item.admins %}
+      <div class="biz-admins">
+        {% for username in item.admins %}
+        <span class="admin-pill"><i class="fas fa-user" style="font-size:.6rem;margin-right:.25rem;"></i>{{ username }}</span>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="font-size:.72rem;color:#b3c5cf;margin-top:.4rem;font-style:italic;">No admin assigned</div>
+      {% endif %}
+    </div>
+    <form method="POST" action="{{ url_for('delete_business', business_id=biz._id) }}"
+          onsubmit="return confirm('Delete \"{{ biz.name }}\"? This cannot be undone and will also delete the branch admin(s).');">
+      <button type="submit" class="del-btn">
+        <i class="fas fa-trash" style="font-size:.72rem;"></i> Delete
+      </button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="sf-card">
+  <div style="text-align:center;padding:3rem;color:#7d97ac;">
+    <i class="fas fa-building" style="font-size:2rem;opacity:.2;display:block;margin-bottom:.75rem;"></i>
+    No businesses yet — use the form above to add your first branch
+  </div>
+</div>
+{% endif %}
 {% endblock %}

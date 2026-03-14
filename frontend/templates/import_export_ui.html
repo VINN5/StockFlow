@@ -1,35 +1,33 @@
 {#
-  Reusable import/export toolbar + duplicate resolution modal.
-  Usage: {% from 'import_export_ui.html' import import_export_bar, duplicates_modal %}
-
-  import_export_bar(export_url, import_url, resolve_url, template_name)
-  duplicates_modal(pending_duplicates, resolve_url, entity_label)
+  Redesigned import/export toolbar + duplicate resolution modal.
+  Usage: {% from 'import_export_ui.html' import import_export_bar, duplicates_modal, import_summary_alert %}
 #}
 
 {% macro import_export_bar(export_url, import_url, template_filename=None) %}
 <div class="d-flex flex-wrap gap-2 align-items-center">
 
-  {# Export button #}
-  <a href="{{ export_url }}" class="btn btn-outline-success btn-sm">
-    <i class="fas fa-file-excel me-1"></i>Export Excel
+  <a href="{{ export_url }}"
+     style="display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.38rem .85rem;border-radius:8px;border:1.5px solid #bbf7d0;background:#f0fdf4;color:#166534;text-decoration:none;transition:all .15s;"
+     onmouseover="this.style.background='#10b981';this.style.color='#fff';this.style.borderColor='#10b981';"
+     onmouseout="this.style.background='#f0fdf4';this.style.color='#166534';this.style.borderColor='#bbf7d0';">
+    <i class="fas fa-file-excel" style="font-size:.72rem;"></i> Export
   </a>
 
-  {# Template download if provided #}
   {% if template_filename %}
   <a href="{{ url_for('static', filename='templates/' + template_filename) }}"
-     class="btn btn-outline-secondary btn-sm">
-    <i class="fas fa-download me-1"></i>Download Template
+     style="display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.38rem .85rem;border-radius:8px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#7d97ac;text-decoration:none;transition:all .15s;">
+    <i class="fas fa-download" style="font-size:.72rem;"></i> Template
   </a>
   {% endif %}
 
-  {# Import trigger #}
-  <button class="btn btn-outline-primary btn-sm"
-          onclick="document.getElementById('excelFileInput').click()">
-    <i class="fas fa-file-upload me-1"></i>Import Excel
+  <button onclick="document.getElementById('excelFileInput').click()"
+          style="display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.38rem .85rem;border-radius:8px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1e40af;cursor:pointer;transition:all .15s;"
+          onmouseover="this.style.background='#3b82f6';this.style.color='#fff';this.style.borderColor='#3b82f6';"
+          onmouseout="this.style.background='#eff6ff';this.style.color='#1e40af';this.style.borderColor='#bfdbfe';">
+    <i class="fas fa-file-upload" style="font-size:.72rem;"></i> Import
   </button>
 
-  {# Hidden file input + auto-submit form #}
-  <form id="importForm" method="POST" action="{{ import_url }}" enctype="multipart/form-data" class="d-none">
+  <form id="importForm" method="POST" action="{{ import_url }}" enctype="multipart/form-data" style="display:none;">
     <input type="file" id="excelFileInput" name="excel_file" accept=".xlsx"
            onchange="document.getElementById('importForm').submit()">
   </form>
@@ -39,72 +37,76 @@
 
 {% macro duplicates_modal(pending_duplicates, resolve_url, entity_label='item') %}
 {% if pending_duplicates %}
-<div class="modal fade show d-block" id="duplicatesModal" tabindex="-1"
-     style="background:rgba(0,0,0,.5);">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header bg-warning">
-        <h5 class="modal-title text-dark">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          {{ pending_duplicates|length }} Duplicate {{ entity_label }}{{ 's' if pending_duplicates|length != 1 }} Found
-        </h5>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted small mb-3">
-          These {{ entity_label }}s already exist in the system. Choose what to do with each one.
-          <strong>Skipped items keep their existing data unchanged.</strong>
-        </p>
-        <form method="POST" action="{{ resolve_url }}">
-          {% for dup in pending_duplicates %}
-          {% set eid = dup.existing_id %}
-          <input type="hidden" name="data_{{ eid }}" value="{{ dup.data | tojson }}">
-          <div class="card mb-3 border-warning">
-            <div class="card-body py-2">
-              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                <div>
-                  <strong>{{ dup.name }}</strong>
-                  <span class="badge bg-secondary ms-2">Row {{ dup.row }}</span>
-                  <div class="small text-muted mt-1">
-                    {% for k, v in dup.data.items() %}
-                    {% if v %}{{ k }}: <em>{{ v }}</em>{% if not loop.last %} &bull; {% endif %}{% endif %}
-                    {% endfor %}
-                  </div>
-                </div>
-                <div class="d-flex gap-2">
-                  <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio"
-                           name="action_{{ eid }}" value="overwrite"
-                           id="ow_{{ eid }}">
-                    <label class="form-check-label text-danger fw-bold" for="ow_{{ eid }}">
-                      Overwrite
-                    </label>
-                  </div>
-                  <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio"
-                           name="action_{{ eid }}" value="skip"
-                           id="sk_{{ eid }}" checked>
-                    <label class="form-check-label text-success fw-bold" for="sk_{{ eid }}">
-                      Skip
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
+<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1050;display:flex;align-items:center;justify-content:center;padding:1rem;"
+     id="duplicatesOverlay">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:640px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.2);">
 
-          <div class="d-flex gap-2 mt-3">
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-check me-1"></i>Confirm Choices
-            </button>
-            <button type="button" class="btn btn-secondary"
-                    onclick="document.getElementById('duplicatesModal').remove()">
-              Cancel
-            </button>
+    <!-- header -->
+    <div style="background:#92400e;padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:.65rem;">
+        <div style="width:34px;height:34px;background:rgba(255,255,255,.15);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;">
+          <i class="fas fa-exclamation-triangle" style="font-size:.85rem;"></i>
+        </div>
+        <div>
+          <div style="font-size:.9rem;font-weight:700;color:#fff;">
+            {{ pending_duplicates|length }} Duplicate{{ 's' if pending_duplicates|length != 1 }} Found
           </div>
-        </form>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.5);">
+            {{ entity_label|capitalize }}{{ 's' if pending_duplicates|length != 1 }} already exist in the system
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- body -->
+    <div style="overflow-y:auto;padding:1.25rem 1.5rem;flex:1;">
+      <div style="font-size:.78rem;color:#7d97ac;margin-bottom:1rem;">
+        Choose what to do with each duplicate. <strong style="color:#0d1b2a;">Skipped items keep existing data.</strong>
+      </div>
+
+      <form method="POST" action="{{ resolve_url }}">
+        {% for dup in pending_duplicates %}
+        {% set eid = dup.existing_id %}
+        <input type="hidden" name="data_{{ eid }}" value="{{ dup.data | tojson }}">
+
+        <div style="border:1.5px solid #e8edf2;border-radius:12px;padding:.9rem 1rem;margin-bottom:.75rem;transition:border-color .15s;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.75rem;">
+            <div>
+              <div style="font-weight:700;font-size:.875rem;color:#0d1b2a;">{{ dup.name }}</div>
+              <div style="display:flex;gap:.5rem;margin-top:.3rem;flex-wrap:wrap;">
+                <span style="background:#f3f4f6;color:#6b7280;border-radius:999px;padding:.1rem .55rem;font-size:.68rem;font-weight:600;">Row {{ dup.row }}</span>
+                {% for k, v in dup.data.items() %}{% if v %}
+                <span style="font-size:.72rem;color:#7d97ac;">{{ k }}: <em>{{ v }}</em></span>{% if not loop.last %}&bull;{% endif %}
+                {% endif %}{% endfor %}
+              </div>
+            </div>
+            <div style="display:flex;gap:.65rem;flex-shrink:0;">
+              <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#991b1b;">
+                <input type="radio" name="action_{{ eid }}" value="overwrite" style="accent-color:#ef4444;">
+                Overwrite
+              </label>
+              <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.8rem;font-weight:600;color:#166534;">
+                <input type="radio" name="action_{{ eid }}" value="skip" checked style="accent-color:#10b981;">
+                Skip
+              </label>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+
+        <div style="display:flex;gap:.65rem;margin-top:1rem;">
+          <button type="submit"
+                  style="flex:1;background:#0d1b2a;color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:700;padding:.75rem;cursor:pointer;">
+            <i class="fas fa-check me-1"></i> Confirm Choices
+          </button>
+          <button type="button" onclick="document.getElementById('duplicatesOverlay').remove()"
+                  style="background:#f0f4f8;color:#7d97ac;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:600;padding:.75rem 1.1rem;cursor:pointer;">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+
   </div>
 </div>
 {% endif %}
@@ -113,17 +115,24 @@
 
 {% macro import_summary_alert(import_summary) %}
 {% if import_summary %}
-<div class="alert alert-info alert-dismissible fade show" role="alert">
-  <i class="fas fa-info-circle me-2"></i>
-  <strong>Import Summary:</strong>
-  {{ import_summary.inserted|length }} new record(s) added.
-  {% if import_summary.errors %}
-    {{ import_summary.errors|length }} error(s):
-    <ul class="mb-0 mt-1">
-      {% for e in import_summary.errors %}<li>{{ e }}</li>{% endfor %}
-    </ul>
-  {% endif %}
-  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:.8rem 1rem;font-size:.82rem;color:#1e40af;margin-bottom:1.25rem;display:flex;align-items:flex-start;gap:.6rem;">
+  <i class="fas fa-info-circle" style="flex-shrink:0;margin-top:.1rem;"></i>
+  <div>
+    <strong>Import complete:</strong>
+    {{ import_summary.inserted|length }} new record(s) added.
+    {% if import_summary.errors %}
+    <div style="margin-top:.35rem;color:#991b1b;">
+      {{ import_summary.errors|length }} error(s):
+      <ul style="margin:.25rem 0 0;padding-left:1.25rem;">
+        {% for e in import_summary.errors %}<li>{{ e }}</li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+  <button onclick="this.parentElement.remove()"
+          style="margin-left:auto;background:none;border:none;color:#7d97ac;cursor:pointer;font-size:.9rem;flex-shrink:0;padding:0;">
+    <i class="fas fa-times"></i>
+  </button>
 </div>
 {% endif %}
 {% endmacro %}

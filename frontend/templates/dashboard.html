@@ -1,232 +1,373 @@
 {% extends "base.html" %}
-
 {% block title %}Dashboard - StockFlow{% endblock %}
-
 {% block content %}
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-
+  /* ═══════════════════════════════════════
+     DASHBOARD TOKENS
+  ══════════════════════════════════════ */
   :root {
-    --bg: #f0f2f7;
-    --card: #ffffff;
-    --ink: #111827;
-    --muted: #6b7280;
-    --border: #e5e7eb;
-    --blue: #2563eb;
-    --blue-bg: #eff6ff;
-    --amber: #d97706;
-    --amber-bg: #fffbeb;
-    --green: #059669;
-    --green-bg: #ecfdf5;
-    --purple: #7c3aed;
-    --purple-bg: #f5f3ff;
-    --red: #dc2626;
-    --red-bg: #fef2f2;
-    --radius: 14px;
-    --shadow: 0 1px 4px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+    --db-bg:      #f0f4f8;
+    --db-card:    #ffffff;
+    --db-navy:    #0d1b2a;
+    --db-navy2:   #1a2f45;
+    --db-amber:   #f59e0b;
+    --db-amber2:  #fbbf24;
+    --db-green:   #10b981;
+    --db-red:     #ef4444;
+    --db-blue:    #3b82f6;
+    --db-purple:  #8b5cf6;
+    --db-muted:   #7d97ac;
+    --db-border:  #e8edf2;
+    --db-radius:  14px;
+    --db-shadow:  0 1px 3px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.05);
   }
 
-  * { box-sizing: border-box; }
-
-  .db {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    background: var(--bg);
-    min-height: 100vh;
-    padding: 1.25rem 1rem 5rem;
-    color: var(--ink);
+  .db-wrap {
+    font-family: 'DM Sans', sans-serif;
+    padding-bottom: 3rem;
   }
 
-  /* ── Header ── */
-  .db-head { margin-bottom: 1.5rem; }
-  .db-head-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
-  .db-head h1 { font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--ink); }
-  .db-head p  { font-size: .85rem; color: var(--muted); margin: .2rem 0 0; }
-  .db-pill {
-    background: var(--ink); color: #fff; border-radius: 999px;
-    padding: .35rem .9rem; font-size: .78rem; font-weight: 600;
-    white-space: nowrap; flex-shrink: 0;
+  /* ── Page header ── */
+  .db-page-header {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; flex-wrap: wrap;
+    gap: .75rem; margin-bottom: 1.75rem;
+  }
+  .db-greeting-name {
+    font-size: 1.5rem; font-weight: 700;
+    letter-spacing: -.025em; color: var(--db-navy); margin: 0;
+  }
+  .db-greeting-sub {
+    font-size: .82rem; color: var(--db-muted); margin-top: .2rem;
+  }
+  .db-clock-pill {
+    background: var(--db-navy); color: rgba(255,255,255,.8);
+    border-radius: 999px; padding: .4rem 1rem;
+    font-size: .78rem; font-weight: 600; white-space: nowrap;
+    display: flex; align-items: center; gap: .4rem;
+    flex-shrink: 0;
   }
 
   /* ── Section label ── */
-  .db-section {
-    font-size: .7rem; font-weight: 700; letter-spacing: .1em;
-    text-transform: uppercase; color: var(--muted); margin: 1.5rem 0 .75rem;
+  .db-section-label {
+    font-size: .65rem; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--db-muted);
+    margin: 1.5rem 0 .85rem;
   }
 
   /* ── Metric cards ── */
-  .db-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: .75rem; }
-
+  .db-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .85rem;
+  }
   .db-metric {
-    background: var(--card); border-radius: var(--radius);
-    padding: 1rem; box-shadow: var(--shadow);
-    border: 1px solid var(--border);
+    background: var(--db-card);
+    border: 1px solid var(--db-border);
+    border-radius: var(--db-radius);
+    padding: 1.1rem 1.1rem 1rem;
+    box-shadow: var(--db-shadow);
     text-decoration: none; color: inherit;
     display: block; position: relative; overflow: hidden;
     transition: transform .15s, box-shadow .15s;
   }
-  .db-metric:hover, .db-metric:focus {
+  .db-metric:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(0,0,0,.1);
+    box-shadow: 0 6px 24px rgba(0,0,0,.09);
     text-decoration: none; color: inherit;
   }
-  .db-metric:active { transform: translateY(0); }
-
   .db-metric-icon {
-    width: 36px; height: 36px; border-radius: 10px;
+    width: 38px; height: 38px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    font-size: .9rem; margin-bottom: .75rem;
+    font-size: .9rem; margin-bottom: .8rem; flex-shrink: 0;
   }
-  .db-metric-val { font-size: 1.5rem; font-weight: 700; line-height: 1; margin-bottom: .25rem; }
-  .db-metric-lbl { font-size: .72rem; color: var(--muted); font-weight: 500; line-height: 1.3; }
+  .db-metric-val {
+    font-size: 1.55rem; font-weight: 800;
+    letter-spacing: -.03em; line-height: 1; margin-bottom: .2rem;
+  }
+  .db-metric-lbl {
+    font-size: .72rem; color: var(--db-muted);
+    font-weight: 500; line-height: 1.3;
+  }
   .db-metric-bar {
     position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
-    border-radius: 0 0 var(--radius) var(--radius);
+    border-radius: 0 0 var(--db-radius) var(--db-radius);
   }
   .db-metric-arrow {
     position: absolute; top: .9rem; right: .9rem;
-    font-size: .65rem; color: var(--muted); opacity: .4;
+    font-size: .6rem; color: var(--db-muted); opacity: .35;
   }
 
-  .m-blue   .db-metric-icon { background: var(--blue-bg);   color: var(--blue);   }
-  .m-blue   .db-metric-bar  { background: var(--blue);   }
-  .m-amber  .db-metric-icon { background: var(--amber-bg);  color: var(--amber);  }
-  .m-amber  .db-metric-bar  { background: var(--amber);  }
-  .m-green  .db-metric-icon { background: var(--green-bg);  color: var(--green);  }
-  .m-green  .db-metric-bar  { background: var(--green);  }
-  .m-purple .db-metric-icon { background: var(--purple-bg); color: var(--purple); }
-  .m-purple .db-metric-bar  { background: var(--purple); }
-  .m-red    .db-metric-icon { background: var(--red-bg);    color: var(--red);    }
-  .m-red    .db-metric-bar  { background: var(--red);    }
+  .m-blue   .db-metric-icon { background: #eff6ff; color: var(--db-blue); }
+  .m-blue   .db-metric-bar  { background: var(--db-blue); }
+  .m-blue   .db-metric-val  { color: var(--db-blue); }
+  .m-amber  .db-metric-icon { background: #fef9c3; color: #92400e; }
+  .m-amber  .db-metric-bar  { background: var(--db-amber); }
+  .m-amber  .db-metric-val  { color: #92400e; }
+  .m-green  .db-metric-icon { background: #ecfdf5; color: var(--db-green); }
+  .m-green  .db-metric-bar  { background: var(--db-green); }
+  .m-green  .db-metric-val  { color: var(--db-green); }
+  .m-purple .db-metric-icon { background: #f5f3ff; color: var(--db-purple); }
+  .m-purple .db-metric-bar  { background: var(--db-purple); }
+  .m-purple .db-metric-val  { color: var(--db-purple); }
+  .m-red    .db-metric-icon { background: #fef2f2; color: var(--db-red); }
+  .m-red    .db-metric-bar  { background: var(--db-red); }
+  .m-red    .db-metric-val  { color: var(--db-red); }
 
-  /* ── Hero card ── */
+  /* ── Hero revenue card ── */
   .db-hero {
-    background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
-    border-radius: var(--radius); padding: 1.5rem;
+    background: linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 100%);
+    border-radius: var(--db-radius);
+    padding: 1.6rem 1.75rem;
     color: #fff; position: relative; overflow: hidden;
-    box-shadow: 0 8px 32px rgba(15,23,42,.25);
+    box-shadow: 0 8px 32px rgba(13,27,42,.3);
+    margin-bottom: .85rem;
   }
   .db-hero::before {
-    content: ''; position: absolute; top: -40px; right: -40px;
-    width: 140px; height: 140px; border-radius: 50%;
-    background: rgba(37,99,235,.3); pointer-events: none;
+    content: '';
+    position: absolute; top: -50px; right: -50px;
+    width: 160px; height: 160px; border-radius: 50%;
+    background: rgba(245,158,11,.12); pointer-events: none;
   }
-  .db-hero-lbl { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; opacity: .55; margin-bottom: .35rem; }
-  .db-hero-amt { font-size: 2rem; font-weight: 700; line-height: 1; margin-bottom: .2rem; }
-  .db-hero-sub { font-size: .8rem; opacity: .5; }
-  .db-hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: 1.1rem; }
-  .db-hero-mini { background: rgba(255,255,255,.08); border-radius: 10px; padding: .75rem 1rem; }
-  .db-hero-mini-val { font-size: 1rem; font-weight: 700; }
-  .db-hero-mini-lbl { font-size: .72rem; opacity: .5; margin-top: .1rem; }
+  .db-hero::after {
+    content: '';
+    position: absolute; bottom: -30px; left: -30px;
+    width: 100px; height: 100px; border-radius: 50%;
+    background: rgba(59,130,246,.08); pointer-events: none;
+  }
+  .db-hero-label {
+    font-size: .65rem; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: rgba(255,255,255,.4);
+    margin-bottom: .4rem;
+  }
+  .db-hero-amount {
+    font-size: 2.2rem; font-weight: 800; line-height: 1;
+    letter-spacing: -.03em; color: #fff;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: .25rem;
+  }
+  .db-hero-business {
+    font-size: .78rem; color: rgba(255,255,255,.35);
+  }
+  .db-hero-grid {
+    display: grid; grid-template-columns: repeat(2,1fr);
+    gap: .65rem; margin-top: 1.25rem;
+    position: relative; z-index: 1;
+  }
+  .db-hero-mini {
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px; padding: .8rem 1rem;
+  }
+  .db-hero-mini-val {
+    font-size: .95rem; font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    color: #fff;
+  }
+  .db-hero-mini-lbl {
+    font-size: .68rem; color: rgba(255,255,255,.35);
+    margin-top: .15rem;
+  }
 
   /* ── Generic card ── */
-  .db-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden; }
-  .db-card-head { padding: .9rem 1.1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-  .db-card-title { font-size: .9rem; font-weight: 700; margin: 0; }
-
-  .db-tag { font-size: .7rem; font-weight: 600; padding: .25rem .65rem; border-radius: 999px; }
-  .db-tag-green  { background: var(--green-bg);  color: var(--green);  }
-  .db-tag-blue   { background: var(--blue-bg);   color: var(--blue);   }
-  .db-tag-amber  { background: var(--amber-bg);  color: var(--amber);  }
-
-  /* ── Two column ── */
-  .db-2col { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-
-  /* ── Table ── */
-  .db-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-  .db-table thead th {
-    padding: .6rem 1.1rem; font-size: .68rem; font-weight: 700;
-    letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
-    border-bottom: 1px solid var(--border); text-align: left;
+  .db-card {
+    background: var(--db-card);
+    border: 1px solid var(--db-border);
+    border-radius: var(--db-radius);
+    box-shadow: var(--db-shadow);
+    overflow: hidden;
   }
-  .db-table tbody tr { transition: background .1s; }
-  .db-table tbody tr:hover { background: var(--bg); }
-  .db-table tbody td { padding: .75rem 1.1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  .db-table tbody tr:last-child td { border-bottom: none; }
+  .db-card-head {
+    padding: .9rem 1.25rem;
+    border-bottom: 1px solid var(--db-border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: .5rem;
+  }
+  .db-card-title { font-size: .875rem; font-weight: 700; color: var(--db-navy); margin: 0; }
 
-  .db-pay { display: inline-flex; align-items: center; gap: .3rem; font-size: .73rem; font-weight: 600; padding: .2rem .6rem; border-radius: 999px; }
-  .db-pay-cash   { background: var(--green-bg);  color: var(--green);  }
-  .db-pay-credit { background: var(--amber-bg);  color: var(--amber);  }
-  .db-pay-mpesa  { background: var(--blue-bg);   color: var(--blue);   }
+  /* ── Two col grid ── */
+  .db-2col { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
+
+  /* ── Tags ── */
+  .db-tag {
+    font-size: .68rem; font-weight: 700;
+    padding: .22rem .65rem; border-radius: 999px;
+  }
+  .db-tag-green  { background: #ecfdf5; color: #065f46; }
+  .db-tag-blue   { background: #eff6ff; color: #1e40af; }
+  .db-tag-amber  { background: #fef9c3; color: #92400e; }
+  .db-tag-red    { background: #fef2f2; color: #991b1b; }
 
   /* ── Quick actions ── */
   .db-action {
     display: flex; align-items: center; gap: .75rem;
-    padding: .85rem 1rem; border-bottom: 1px solid var(--border);
-    text-decoration: none; color: var(--ink); font-size: .875rem; font-weight: 500;
+    padding: .9rem 1.25rem;
+    border-bottom: 1px solid var(--db-border);
+    text-decoration: none; color: var(--db-navy);
+    font-size: .855rem; font-weight: 500;
     transition: background .12s;
   }
   .db-action:last-child { border-bottom: none; }
-  .db-action:hover { background: var(--bg); color: var(--blue); text-decoration: none; }
-  .db-action-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--blue-bg); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: .8rem; flex-shrink: 0; }
-  .db-action .fa-chevron-right { margin-left: auto; font-size: .65rem; opacity: .35; }
+  .db-action:hover {
+    background: #f6f9fc; color: var(--db-blue);
+    text-decoration: none;
+  }
+  .db-action-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: #eff6ff; color: var(--db-blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .8rem; flex-shrink: 0;
+  }
+  .db-action-arrow { margin-left: auto; font-size: .6rem; opacity: .3; }
 
   /* ── Biz list ── */
-  .db-biz { padding: .85rem 1.1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-  .db-biz:last-child { border-bottom: none; }
-  .db-biz-name { font-size: .875rem; font-weight: 600; }
-  .db-biz-loc  { font-size: .75rem; color: var(--muted); margin-top: .1rem; }
-  .db-biz-date { font-size: .72rem; color: var(--muted); }
+  .db-biz-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: .85rem 1.25rem; border-bottom: 1px solid var(--db-border);
+  }
+  .db-biz-row:last-child { border-bottom: none; }
+  .db-biz-name { font-size: .855rem; font-weight: 700; color: var(--db-navy); }
+  .db-biz-loc  { font-size: .72rem; color: var(--db-muted); margin-top: .15rem; }
+  .db-biz-date { font-size: .7rem; color: var(--db-muted); font-family: 'DM Mono', monospace; }
 
   /* ── Role badges ── */
-  .db-role { display: inline-block; font-size: .68rem; font-weight: 700; padding: .2rem .55rem; border-radius: 999px; }
-  .db-role-super { background: var(--red-bg);    color: var(--red);    }
-  .db-role-admin { background: var(--blue-bg);   color: var(--blue);   }
-  .db-role-cash  { background: #f3f4f6; color: #374151; }
+  .db-role { font-size: .67rem; font-weight: 700; padding: .2rem .55rem; border-radius: 999px; display: inline-block; }
+  .db-role-super  { background: #fef2f2; color: #991b1b; }
+  .db-role-admin  { background: #eff6ff; color: #1e40af; }
+  .db-role-cashier{ background: #f3f4f6; color: #374151; }
 
-  /* ── Empty ── */
-  .db-empty { text-align: center; padding: 2.5rem 1rem; color: var(--muted); font-size: .85rem; }
-  .db-empty i { font-size: 1.5rem; opacity: .25; display: block; margin-bottom: .5rem; }
+  /* ── Table ── */
+  .db-table { width: 100%; border-collapse: collapse; font-size: .845rem; }
+  .db-table thead th {
+    padding: .6rem 1.25rem; font-size: .65rem; font-weight: 700;
+    letter-spacing: .07em; text-transform: uppercase; color: var(--db-muted);
+    border-bottom: 1px solid var(--db-border); text-align: left;
+    background: #f8fafc;
+  }
+  .db-table tbody tr { transition: background .1s; }
+  .db-table tbody tr:hover { background: #f6f9fc; }
+  .db-table tbody td {
+    padding: .75rem 1.25rem;
+    border-bottom: 1px solid #f3f7f9;
+    vertical-align: middle;
+  }
+  .db-table tbody tr:last-child td { border-bottom: none; }
 
-  /* ── Footer ── */
-  .db-footer { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 1.25rem; text-align: center; margin-top: 1.5rem; }
-  .db-footer h3 { font-size: 1rem; font-weight: 700; margin: 0 0 .25rem; }
-  .db-footer p  { font-size: .82rem; color: var(--muted); margin: 0; }
+  /* ── Payment method pills ── */
+  .db-pay {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-size: .72rem; font-weight: 600;
+    padding: .22rem .65rem; border-radius: 999px;
+  }
+  .db-pay-cash   { background: #ecfdf5; color: #065f46; }
+  .db-pay-credit { background: #fef9c3; color: #92400e; }
+  .db-pay-mpesa  { background: #eff6ff; color: #1e40af; }
+
+  /* ── Empty state ── */
+  .db-empty {
+    text-align: center; padding: 2.5rem 1rem;
+    color: var(--db-muted); font-size: .82rem;
+  }
+  .db-empty i {
+    font-size: 1.75rem; opacity: .18;
+    display: block; margin-bottom: .6rem;
+  }
+
+  /* ── Footer card ── */
+  .db-footer {
+    background: var(--db-navy);
+    border-radius: var(--db-radius);
+    padding: 1.4rem 1.75rem;
+    text-align: center; margin-top: 1.5rem;
+    position: relative; overflow: hidden;
+  }
+  .db-footer::before {
+    content: '';
+    position: absolute; top: -40px; right: -40px;
+    width: 120px; height: 120px; border-radius: 50%;
+    background: rgba(245,158,11,.1); pointer-events: none;
+  }
+  .db-footer h3 {
+    font-size: 1rem; font-weight: 700;
+    color: #fff; margin: 0 0 .25rem;
+    position: relative; z-index: 1;
+  }
+  .db-footer p {
+    font-size: .78rem; color: rgba(255,255,255,.3);
+    margin: 0; position: relative; z-index: 1;
+  }
+
+  /* ── Super admin platform stats ── */
+  .platform-stats {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: .85rem; max-width: 380px; margin-bottom: 1.5rem;
+  }
 
   /* ── Animations ── */
-  .db-fade { animation: dbIn .35s ease both; }
-  .db-fade:nth-child(1){ animation-delay:.04s }
-  .db-fade:nth-child(2){ animation-delay:.08s }
-  .db-fade:nth-child(3){ animation-delay:.12s }
-  .db-fade:nth-child(4){ animation-delay:.16s }
-  @keyframes dbIn { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:none } }
+  .db-fade { animation: dbFadeIn .4s cubic-bezier(.22,1,.36,1) both; }
+  .db-fade:nth-child(1) { animation-delay: .05s; }
+  .db-fade:nth-child(2) { animation-delay: .1s; }
+  .db-fade:nth-child(3) { animation-delay: .15s; }
+  .db-fade:nth-child(4) { animation-delay: .2s; }
+  .db-fade:nth-child(5) { animation-delay: .25s; }
+  @keyframes dbFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
 
-  /* ── Mobile ── */
-  @media (max-width: 600px) {
-    .db { padding: 1rem .85rem 5rem; }
+  /* ── Responsive ── */
+  @media (max-width: 767px) {
+    .db-metrics-grid { grid-template-columns: repeat(2, 1fr); gap: .65rem; }
     .db-2col { grid-template-columns: 1fr; }
-    .db-hero-amt { font-size: 1.65rem; }
-    .db-metrics { gap: .6rem; }
-    .db-metric-val { font-size: 1.3rem; }
+    .db-hero-amount { font-size: 1.75rem; }
+    .db-hero-grid { grid-template-columns: repeat(2, 1fr); }
+    .platform-stats { max-width: 100%; }
     .db-table thead { display: none; }
     .db-table tbody td {
       display: flex; justify-content: space-between; align-items: center;
-      padding: .55rem 1rem; border-bottom: none; font-size: .82rem;
+      padding: .5rem 1rem; border-bottom: none; font-size: .82rem;
     }
     .db-table tbody td::before {
-      content: attr(data-label); font-size: .68rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+      content: attr(data-label);
+      font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--db-muted); flex-shrink: 0; margin-right: .5rem;
     }
-    .db-table tbody tr { display: block; border-bottom: 1px solid var(--border); padding: .4rem 0; }
+    .db-table tbody tr {
+      display: block;
+      border-bottom: 1px solid var(--db-border);
+      padding: .35rem 0;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .db-metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .db-hero-grid { grid-template-columns: 1fr 1fr; }
+    .db-metric-val { font-size: 1.3rem; }
   }
 </style>
 
-<div class="db">
+<div class="db-wrap">
 
 {% if is_super_admin %}
-{# ══════════════ SUPER ADMIN ══════════════ #}
+{# ══════════════════════════════════════════
+   SUPER ADMIN DASHBOARD
+══════════════════════════════════════════ #}
 
-  <div class="db-head">
-    <div class="db-head-row">
-      <div>
-        <h1>Control Panel</h1>
-        <p>Welcome, <strong>{{ session.username }}</strong></p>
-      </div>
-      <div class="db-pill"><i class="fas fa-shield-alt me-1"></i>Super Admin</div>
+  <div class="db-page-header db-fade">
+    <div>
+      <h1 class="db-greeting-name">Control Panel</h1>
+      <div class="db-greeting-sub">Welcome, <strong>{{ session.username }}</strong> · Super Admin</div>
+    </div>
+    <div class="db-clock-pill">
+      <i class="fas fa-shield-alt" style="color:#f59e0b;font-size:.8rem;"></i>
+      Super Admin
     </div>
   </div>
 
-  <div class="db-section">Platform Overview</div>
-  <div class="db-metrics" style="grid-template-columns:repeat(2,1fr);max-width:360px;">
+  <!-- Platform stats -->
+  <div class="db-section-label">Platform Overview</div>
+  <div class="platform-stats">
     <a href="{{ url_for('businesses') }}" class="db-metric m-blue db-fade">
       <i class="fas fa-chevron-right db-metric-arrow"></i>
       <div class="db-metric-icon"><i class="fas fa-building"></i></div>
@@ -243,33 +384,50 @@
     </a>
   </div>
 
-  <div class="db-section">Management</div>
+  <!-- Management -->
+  <div class="db-section-label">Management</div>
   <div class="db-2col">
     <div class="db-card db-fade">
-      <div class="db-card-head"><span class="db-card-title">Quick Actions</span></div>
+      <div class="db-card-head">
+        <span class="db-card-title">Quick Actions</span>
+      </div>
       <a href="{{ url_for('businesses') }}" class="db-action">
         <div class="db-action-icon"><i class="fas fa-building"></i></div>
         Manage Businesses
-        <i class="fas fa-chevron-right"></i>
+        <i class="fas fa-chevron-right db-action-arrow"></i>
       </a>
       <a href="{{ url_for('users') }}" class="db-action">
         <div class="db-action-icon"><i class="fas fa-users"></i></div>
         Manage Users
-        <i class="fas fa-chevron-right"></i>
+        <i class="fas fa-chevron-right db-action-arrow"></i>
+      </a>
+      <a href="{{ url_for('products.index') }}" class="db-action">
+        <div class="db-action-icon"><i class="fas fa-box"></i></div>
+        View Products
+        <i class="fas fa-chevron-right db-action-arrow"></i>
+      </a>
+      <a href="{{ url_for('sales.index') }}" class="db-action">
+        <div class="db-action-icon"><i class="fas fa-chart-bar"></i></div>
+        View Sales
+        <i class="fas fa-chevron-right db-action-arrow"></i>
       </a>
     </div>
+
     <div class="db-card db-fade">
       <div class="db-card-head">
         <span class="db-card-title">Active Businesses</span>
         <span class="db-tag db-tag-blue">{{ total_businesses }}</span>
       </div>
       {% for biz in businesses %}
-      <div class="db-biz">
+      <div class="db-biz-row">
         <div>
           <div class="db-biz-name">{{ biz.name }}</div>
-          <div class="db-biz-loc"><i class="fas fa-map-marker-alt me-1" style="font-size:.65rem"></i>{{ biz.location or '—' }}</div>
+          <div class="db-biz-loc">
+            <i class="fas fa-map-marker-alt" style="font-size:.62rem;margin-right:.25rem;"></i>
+            {{ biz.location or '—' }}
+          </div>
         </div>
-        <div class="db-biz-date">{{ biz.created_at.strftime('%b %d') }}</div>
+        <div class="db-biz-date">{{ biz.created_at.strftime('%d %b') }}</div>
       </div>
       {% else %}
       <div class="db-empty"><i class="fas fa-building"></i>No businesses yet</div>
@@ -277,29 +435,43 @@
     </div>
   </div>
 
-  <div class="db-section">All Users</div>
+  <!-- User directory -->
+  <div class="db-section-label">All Users</div>
   <div class="db-card db-fade">
     <div class="db-card-head">
       <span class="db-card-title">User Directory</span>
       <span class="db-tag db-tag-blue">{{ total_users }}</span>
     </div>
-    <div style="overflow-x:auto">
+    <div style="overflow-x:auto;">
       <table class="db-table">
-        <thead><tr><th>Username</th><th>Role</th><th>Business</th><th>Created</th></tr></thead>
+        <thead>
+          <tr><th>Username</th><th>Role</th><th>Business</th><th>Created</th></tr>
+        </thead>
         <tbody>
           {% for user in users %}
           <tr>
-            <td data-label="Username"><strong>{{ user.username }}</strong></td>
+            <td data-label="Username">
+              <div style="display:flex;align-items:center;gap:.5rem;">
+                <div style="width:28px;height:28px;border-radius:50%;background:#0d1b2a;color:rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;">
+                  {{ user.username[:1].upper() }}
+                </div>
+                <strong>{{ user.username }}</strong>
+              </div>
+            </td>
             <td data-label="Role">
               {% if user.role == 'super_admin' %}<span class="db-role db-role-super">Super Admin</span>
               {% elif user.role == 'admin' %}<span class="db-role db-role-admin">Admin</span>
-              {% else %}<span class="db-role db-role-cash">Cashier</span>{% endif %}
+              {% else %}<span class="db-role db-role-cashier">Cashier</span>{% endif %}
             </td>
-            <td data-label="Business">{{ user.business }}</td>
-            <td data-label="Created">{{ user.created }}</td>
+            <td data-label="Business" style="color:#7d97ac;font-size:.835rem;">{{ user.business }}</td>
+            <td data-label="Created" style="color:#7d97ac;font-size:.835rem;font-family:'DM Mono',monospace;">{{ user.created }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="4"><div class="db-empty"><i class="fas fa-users"></i>No users found</div></td></tr>
+          <tr>
+            <td colspan="4">
+              <div class="db-empty"><i class="fas fa-users"></i>No users found</div>
+            </td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
@@ -307,20 +479,24 @@
   </div>
 
 {% else %}
-{# ══════════════ BRANCH VIEW ══════════════ #}
+{# ══════════════════════════════════════════
+   BRANCH DASHBOARD
+══════════════════════════════════════════ #}
 
-  <div class="db-head">
-    <div class="db-head-row">
-      <div>
-        <h1>{{ business_name }}</h1>
-        <p>Welcome back, <strong>{{ session.username }}</strong></p>
-      </div>
-      <div class="db-pill" id="sf-clock"><i class="fas fa-clock me-1"></i>—</div>
+  <!-- Header -->
+  <div class="db-page-header db-fade">
+    <div>
+      <h1 class="db-greeting-name">{{ business_name }}</h1>
+      <div class="db-greeting-sub">Welcome back, <strong>{{ session.username }}</strong></div>
+    </div>
+    <div class="db-clock-pill" id="sf-clock">
+      <i class="fas fa-clock" style="font-size:.75rem;"></i> —
     </div>
   </div>
 
-  <div class="db-section">Key Metrics</div>
-  <div class="db-metrics">
+  <!-- Key metrics -->
+  <div class="db-section-label">Key Metrics</div>
+  <div class="db-metrics-grid">
     <a href="{{ url_for('products.index') }}" class="db-metric m-blue db-fade">
       <i class="fas fa-chevron-right db-metric-arrow"></i>
       <div class="db-metric-icon"><i class="fas fa-boxes"></i></div>
@@ -344,11 +520,12 @@
     </a>
   </div>
 
-  <div class="db-section">Today's Revenue</div>
+  <!-- Revenue hero -->
+  <div class="db-section-label">Today's Revenue</div>
   <div class="db-hero db-fade">
-    <div class="db-hero-lbl">Total Revenue</div>
-    <div class="db-hero-amt">KSh {{ "%.2f"|format(today_sales_total) }}</div>
-    <div class="db-hero-sub">{{ business_name }}</div>
+    <div class="db-hero-label">Total Revenue</div>
+    <div class="db-hero-amount">KSh {{ "%.2f"|format(today_sales_total) }}</div>
+    <div class="db-hero-business">{{ business_name }}</div>
     {% if is_branch_admin %}
     <div class="db-hero-grid">
       <div class="db-hero-mini">
@@ -372,74 +549,102 @@
   </div>
 
   {% if is_branch_admin %}
-  <div class="db-section">Inventory & Profit</div>
-  <div class="db-2col">
-    <div class="db-metric m-purple db-fade" style="display:block">
+
+  <!-- Inventory & profit metrics -->
+  <div class="db-section-label">Inventory &amp; Profit</div>
+  <div class="db-2col" style="margin-bottom:.85rem;">
+    <div class="db-metric m-purple db-fade" style="display:block;">
       <div class="db-metric-icon"><i class="fas fa-warehouse"></i></div>
-      <div class="db-metric-val" style="font-size:1.1rem">KSh {{ "%.2f"|format(current_stock_value) }}</div>
+      <div class="db-metric-val" style="font-size:1.15rem;font-family:'DM Mono',monospace;">
+        KSh {{ "%.2f"|format(current_stock_value) }}
+      </div>
       <div class="db-metric-lbl">Stock Value</div>
       <div class="db-metric-bar"></div>
     </div>
-    <div class="db-metric m-blue db-fade" style="display:block">
+    <div class="db-metric m-blue db-fade" style="display:block;">
       <div class="db-metric-icon"><i class="fas fa-chart-line"></i></div>
-      <div class="db-metric-val" style="font-size:1.1rem">KSh {{ "%.2f"|format(potential_sales_value) }}</div>
+      <div class="db-metric-val" style="font-size:1.15rem;font-family:'DM Mono',monospace;">
+        KSh {{ "%.2f"|format(potential_sales_value) }}
+      </div>
       <div class="db-metric-lbl">Potential Value</div>
       <div class="db-metric-bar"></div>
     </div>
   </div>
 
-  <div class="db-2col" style="margin-top:.75rem">
-    <div class="db-metric m-green db-fade" style="display:block">
+  <div class="db-2col" style="margin-bottom:.85rem;">
+    <div class="db-metric m-green db-fade" style="display:block;">
       <div class="db-metric-icon"><i class="fas fa-wallet"></i></div>
-      <div class="db-metric-val" style="font-size:1.1rem">KSh {{ "%.2f"|format(weekly_profit) }}</div>
+      <div class="db-metric-val" style="font-size:1.15rem;font-family:'DM Mono',monospace;">
+        KSh {{ "%.2f"|format(weekly_profit) }}
+      </div>
       <div class="db-metric-lbl">Weekly Profit</div>
       <div class="db-metric-bar"></div>
     </div>
-    <div class="db-metric m-amber db-fade" style="display:block">
+    <div class="db-metric m-amber db-fade" style="display:block;">
       <div class="db-metric-icon"><i class="fas fa-coins"></i></div>
-      <div class="db-metric-val" style="font-size:1.1rem">KSh {{ "%.2f"|format(monthly_profit) }}</div>
+      <div class="db-metric-val" style="font-size:1.15rem;font-family:'DM Mono',monospace;">
+        KSh {{ "%.2f"|format(monthly_profit) }}
+      </div>
       <div class="db-metric-lbl">Monthly Profit</div>
       <div class="db-metric-bar"></div>
     </div>
   </div>
 
-  <div class="db-section">Today's Transactions</div>
+  <!-- Today's transactions -->
+  <div class="db-section-label">Today's Transactions</div>
   <div class="db-card db-fade">
     <div class="db-card-head">
       <span class="db-card-title">Sales Log</span>
-      <span class="db-tag {% if today_sales|length > 0 %}db-tag-green{% else %}db-tag-amber{% endif %}">
+      <span class="db-tag {{ 'db-tag-green' if today_sales|length > 0 else 'db-tag-amber' }}">
         {{ today_sales|length }} sale{{ 's' if today_sales|length != 1 }}
       </span>
     </div>
-    <div style="overflow-x:auto">
+    <div style="overflow-x:auto;">
       <table class="db-table">
         <thead>
-          <tr><th>Time</th><th>Client</th><th>Items</th><th>Total</th><th>Payment</th></tr>
+          <tr>
+            <th>Time</th><th>Client</th><th>Items</th>
+            <th>Total</th><th>Payment</th>
+          </tr>
         </thead>
         <tbody>
           {% for sale in today_sales %}
           <tr>
-            <td data-label="Time"><strong>{{ sale.date.strftime('%H:%M') }}</strong></td>
-            <td data-label="Client">{{ sale.client_name }}</td>
-            <td data-label="Items"><span class="db-tag db-tag-blue">{{ sale.items_count }}</span></td>
-            <td data-label="Total"><strong>KSh {{ "%.2f"|format(sale.total_amount) }}</strong></td>
+            <td data-label="Time">
+              <strong style="font-family:'DM Mono',monospace;">{{ sale.date.strftime('%H:%M') }}</strong>
+            </td>
+            <td data-label="Client" style="color:#7d97ac;">{{ sale.client_name }}</td>
+            <td data-label="Items">
+              <span class="db-tag db-tag-blue">{{ sale.items_count }}</span>
+            </td>
+            <td data-label="Total">
+              <strong style="font-family:'DM Mono',monospace;">KSh {{ "%.2f"|format(sale.total_amount) }}</strong>
+            </td>
             <td data-label="Payment">
               {% set pm = sale.payment_method|lower %}
-              <span class="db-pay {% if pm=='cash' %}db-pay-cash{% elif pm=='credit' %}db-pay-credit{% else %}db-pay-mpesa{% endif %}">
-                <i class="fas {% if pm=='cash' %}fa-money-bill{% elif pm=='credit' %}fa-clock{% else %}fa-mobile-alt{% endif %}"></i>
+              <span class="db-pay db-pay-{{ pm if pm in ['cash','credit','mpesa'] else 'cash' }}">
+                <i class="fas {{ 'fa-money-bill' if pm=='cash' else 'fa-clock' if pm=='credit' else 'fa-mobile-alt' }}"></i>
                 {{ sale.payment_method|capitalize }}
               </span>
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="5"><div class="db-empty"><i class="fas fa-receipt"></i>No sales yet today</div></td></tr>
+          <tr>
+            <td colspan="5">
+              <div class="db-empty">
+                <i class="fas fa-receipt"></i>No sales yet today
+              </div>
+            </td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
+
   {% endif %}
 
+  <!-- Footer -->
   <div class="db-footer db-fade">
     <h3>Keep it up, {{ session.username }}! 🎯</h3>
     <p>{{ business_name }} · StockFlow</p>
@@ -449,16 +654,17 @@
 </div>
 
 <script>
-  const el = document.getElementById('sf-clock');
-  if (el) {
+  const clockEl = document.getElementById('sf-clock');
+  if (clockEl) {
     const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const tick = () => {
       const n = new Date();
       const h = String(n.getHours()).padStart(2,'0');
       const m = String(n.getMinutes()).padStart(2,'0');
-      el.innerHTML = `<i class="fas fa-clock me-1"></i>${days[n.getDay()]} ${h}:${m}`;
+      clockEl.innerHTML = `<i class="fas fa-clock" style="font-size:.75rem;"></i> ${days[n.getDay()]} ${h}:${m}`;
     };
-    tick(); setInterval(tick, 1000);
+    tick();
+    setInterval(tick, 1000);
   }
 </script>
 {% endblock %}

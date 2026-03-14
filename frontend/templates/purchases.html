@@ -1,95 +1,126 @@
 {% extends "base.html" %}
 {% block title %}Purchases - StockFlow{% endblock %}
 {% block content %}
-<div class="container-fluid mt-4 px-3">
-    <h1 class="mb-4">Purchase History</h1>
+<style>
+  .sf-page-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.75rem; }
+  .sf-page-title  { font-size:1.5rem; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .sf-page-sub    { font-size:.82rem; color:#7d97ac; margin-top:.2rem; }
+  .sf-card        { background:#fff; border:1px solid #e8edf2; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04); overflow:hidden; }
+  .biz-group-header { display:flex; align-items:center; gap:.65rem; padding:1.25rem 1.5rem .75rem; border-bottom:1px solid #f0f4f8; }
+  .biz-badge { display:inline-flex; align-items:center; gap:.45rem; background:#0d1b2a; color:rgba(255,255,255,.85); border-radius:9px; padding:.35rem .8rem; font-size:.78rem; font-weight:600; }
+  .item-list { margin:0; padding-left:1rem; }
+  .item-list li { font-size:.78rem; color:#374151; line-height:1.7; }
+  .receipt-btn {
+    display:inline-flex; align-items:center; gap:.4rem;
+    font-size:.78rem; font-weight:600; padding:.35rem .75rem;
+    border-radius:8px; border:1.5px solid #e2e8f0;
+    background:#fafbfc; color:#0d1b2a; text-decoration:none;
+    transition:all .15s;
+  }
+  .receipt-btn:hover { border-color:#0d1b2a; background:#0d1b2a; color:#fff; }
+</style>
 
-    {% if not is_super_admin %}
-    <div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
-        <a href="/purchases/new" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Record New Purchase
-        </a>
-        <a href="{{ url_for('purchases.export') }}" class="btn btn-outline-success">
-            <i class="fas fa-file-excel me-1"></i>Export Excel
-        </a>
-    </div>
-    {% endif %}
-
-    {% if is_super_admin %}
-    {% for biz_name, biz_purchases in grouped.items() %}
-    <div class="mb-5">
-        <div class="d-flex align-items-center mb-3 gap-2">
-            <span class="badge bg-primary fs-6 px-3 py-2">
-                <i class="fas fa-building me-2"></i>{{ biz_name }}
-            </span>
-            <span class="badge bg-secondary">{{ biz_purchases|length }} purchase{{ 's' if biz_purchases|length != 1 }}</span>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle table-card-mobile">
-                <thead class="table-dark">
-                    <tr><th>Date</th><th>Supplier</th><th>Items</th><th>Total Cost</th><th>Actions</th></tr>
-                </thead>
-                <tbody>
-                    {% for purchase in biz_purchases %}
-                    <tr>
-                        <td>{{ purchase.date.strftime('%Y-%m-%d %H:%M') if purchase.date else 'Unknown' }}</td>
-                        <td>{{ purchase.supplier_name or 'Unknown' }}</td>
-                        <td>
-                            <ul class="mb-0 ps-3 small">
-                                {% for item in purchase.items %}
-                                <li>{{ item.quantity or 0 }} × {{ item.product_name or 'Unknown' }} @ KSh {{ "%.2f"|format(item.cost_price or 0.0) }}</li>
-                                {% else %}<li class="text-muted">No items</li>{% endfor %}
-                            </ul>
-                        </td>
-                        <td><strong>KSh {{ "%.2f"|format(purchase.total_cost or 0.0) }}</strong></td>
-                        <td>
-                            <a href="/purchases/receipt/{{ purchase._id|string }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-receipt me-1"></i>Receipt
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% else %}
-    <div class="alert alert-info">No purchases found in any business.</div>
-    {% endfor %}
-
-    {% else %}
-    <div class="table-responsive">
-        <table class="table table-hover align-middle table-card-mobile">
-            <thead class="table-dark">
-                <tr><th>Date</th><th>Supplier</th><th>Items</th><th>Total Cost</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-                {% for purchase in purchases %}
-                <tr>
-                    <td>{{ purchase.date.strftime('%Y-%m-%d %H:%M') if purchase.date else 'Unknown Date' }}</td>
-                    <td>{{ purchase.supplier_name or 'Unknown Supplier' }}</td>
-                    <td>
-                        <ul class="mb-0 ps-3 small">
-                            {% for item in purchase.items %}
-                            <li>{{ item.quantity or 0 }} × {{ item.product_name or 'Unknown' }} @ KSh {{ "%.2f"|format(item.cost_price or 0.0) }}</li>
-                            {% else %}<li class="text-muted">No items</li>{% endfor %}
-                        </ul>
-                    </td>
-                    <td><strong>KSh {{ "%.2f"|format(purchase.total_cost or 0.0) }}</strong></td>
-                    <td>
-                        <a href="/purchases/receipt/{{ purchase._id|string }}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-receipt me-1"></i>Receipt
-                        </a>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" class="text-center py-5 text-muted">No purchases recorded yet.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
+<div class="sf-page-header">
+  <div>
+    <h1 class="sf-page-title">Purchase History</h1>
+    <div class="sf-page-sub">Record and track all stock purchases from suppliers</div>
+  </div>
+  {% if not is_super_admin %}
+  <div style="display:flex;gap:.65rem;flex-wrap:wrap;">
+    <a href="/purchases/new" class="btn btn-primary d-flex align-items-center gap-2">
+      <i class="fas fa-plus" style="font-size:.8rem;"></i> New Purchase
+    </a>
+    <a href="{{ url_for('purchases.export') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+      <i class="fas fa-file-excel" style="font-size:.8rem;"></i> Export
+    </a>
+  </div>
+  {% endif %}
 </div>
+
+{% if is_super_admin %}
+
+  {% for biz_name, biz_purchases in grouped.items() %}
+  <div class="sf-card mb-4">
+    <div class="biz-group-header">
+      <div class="biz-badge"><i class="fas fa-building" style="font-size:.7rem;opacity:.6;"></i> {{ biz_name }}</div>
+      <span style="font-size:.78rem;color:#7d97ac;">{{ biz_purchases|length }} purchase{{ 's' if biz_purchases|length != 1 }}</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle table-card-mobile mb-0">
+        <thead><tr><th>Date</th><th>Supplier</th><th>Items</th><th>Total Cost</th><th>Receipt</th></tr></thead>
+        <tbody>
+          {% for purchase in biz_purchases %}
+          <tr>
+            <td data-label="Date">
+              <span style="font-weight:600;">{{ purchase.date.strftime('%d %b %Y') if purchase.date else 'Unknown' }}</span>
+              <span style="font-size:.75rem;color:#7d97ac;display:block;">{{ purchase.date.strftime('%H:%M') if purchase.date else '' }}</span>
+            </td>
+            <td data-label="Supplier"><strong>{{ purchase.supplier_name or 'Unknown' }}</strong></td>
+            <td data-label="Items">
+              <ul class="item-list">
+                {% for item in purchase.items %}
+                <li>{{ item.quantity or 0 }} × {{ item.product_name or 'Unknown' }} <span style="color:#7d97ac;">@ KSh {{ "%.2f"|format(item.cost_price or 0) }}</span></li>
+                {% else %}<li style="color:#b3c5cf;">No items</li>{% endfor %}
+              </ul>
+            </td>
+            <td data-label="Total" style="font-family:'DM Mono',monospace;font-weight:700;">KSh {{ "%.2f"|format(purchase.total_cost or 0) }}</td>
+            <td data-label="Receipt">
+              <a href="/purchases/receipt/{{ purchase._id|string }}" class="receipt-btn">
+                <i class="fas fa-receipt" style="font-size:.75rem;"></i> View
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info">No purchases found in any business.</div>
+  {% endfor %}
+
+{% else %}
+
+  <div class="sf-card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle table-card-mobile mb-0">
+        <thead><tr><th>Date</th><th>Supplier</th><th>Items</th><th>Total Cost</th><th>Receipt</th></tr></thead>
+        <tbody>
+          {% for purchase in purchases %}
+          <tr>
+            <td data-label="Date">
+              <span style="font-weight:600;">{{ purchase.date.strftime('%d %b %Y') if purchase.date else 'Unknown' }}</span>
+              <span style="font-size:.75rem;color:#7d97ac;display:block;">{{ purchase.date.strftime('%H:%M') if purchase.date else '' }}</span>
+            </td>
+            <td data-label="Supplier"><strong>{{ purchase.supplier_name or 'Unknown Supplier' }}</strong></td>
+            <td data-label="Items">
+              <ul class="item-list">
+                {% for item in purchase.items %}
+                <li>{{ item.quantity or 0 }} × {{ item.product_name or 'Unknown' }} <span style="color:#7d97ac;">@ KSh {{ "%.2f"|format(item.cost_price or 0) }}</span></li>
+                {% else %}<li style="color:#b3c5cf;">No items</li>{% endfor %}
+              </ul>
+            </td>
+            <td data-label="Total" style="font-family:'DM Mono',monospace;font-weight:700;">KSh {{ "%.2f"|format(purchase.total_cost or 0) }}</td>
+            <td data-label="Receipt">
+              <a href="/purchases/receipt/{{ purchase._id|string }}" class="receipt-btn">
+                <i class="fas fa-receipt" style="font-size:.75rem;"></i> View
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5">
+              <div style="text-align:center;padding:3rem;color:#7d97ac;">
+                <i class="fas fa-shopping-bag" style="font-size:2rem;opacity:.2;display:block;margin-bottom:.75rem;"></i>
+                No purchases recorded yet
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% endif %}
 {% endblock %}

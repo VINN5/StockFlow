@@ -1,126 +1,267 @@
 {% extends "base.html" %}
 {% block title %}POS Sales - StockFlow{% endblock %}
 {% block content %}
-
 <style>
-  .product-card .card { transition: transform 0.15s, box-shadow 0.15s; }
-  .product-card .card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.13) !important; }
-  #cartItems { max-height: 340px; overflow-y: auto; }
-  .cart-item { background: #f8f9fa; border-radius: 10px; padding: .6rem .75rem; margin-bottom: .5rem; }
-  .qty-box { display: flex; align-items: center; gap: 4px; }
-  .qty-box button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #dee2e6; background: #fff; font-size: 1rem; line-height: 1; padding: 0; cursor: pointer; }
-  .qty-box button:hover { background: #e9ecef; }
-  .qty-box span { min-width: 28px; text-align: center; font-weight: 700; font-size: .9rem; }
-  #creditWarning { display:none; background:#fef9c3; border:1px solid #fcd34d; border-radius:8px; padding:.5rem .75rem; font-size:.8rem; color:#92400e; margin-top:.4rem; }
+  /* ── Layout ── */
+  .pos-layout {
+    display:grid;
+    grid-template-columns:1fr 340px;
+    gap:1.25rem;
+    align-items:start;
+  }
+
+  /* ── Product search ── */
+  .pos-search {
+    width:100%; border:1.5px solid #e2e8f0; border-radius:10px;
+    font-family:'DM Sans',sans-serif; font-size:.9rem;
+    padding:.72rem 1rem .72rem 2.6rem;
+    background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='%237d97ac'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") no-repeat .85rem center;
+    outline:none; margin-bottom:1rem;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .pos-search:focus { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
+
+  /* ── Product grid ── */
+  .product-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.75rem; }
+
+  .product-card {
+    background:#fff; border:1.5px solid #e8edf2; border-radius:12px;
+    padding:.9rem .85rem; text-align:center; cursor:pointer;
+    transition:border-color .18s, transform .15s, box-shadow .18s;
+    position:relative;
+  }
+  .product-card:hover { border-color:#0d1b2a; transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.08); }
+  .product-card.out { opacity:.5; cursor:not-allowed; }
+  .product-card.out:hover { transform:none; box-shadow:none; border-color:#e8edf2; }
+
+  .product-name  { font-size:.82rem; font-weight:600; color:#0d1b2a; line-height:1.3; margin-bottom:.35rem; }
+  .product-stock { font-size:.72rem; color:#7d97ac; margin-bottom:.35rem; }
+  .product-price { font-size:.95rem; font-weight:700; color:#10b981; font-family:'DM Mono',monospace; margin-bottom:.6rem; }
+
+  .add-btn {
+    width:100%; background:#0d1b2a; color:#fff; border:none; border-radius:8px;
+    font-family:'DM Sans',sans-serif; font-size:.78rem; font-weight:600;
+    padding:.45rem .5rem; cursor:pointer; transition:background .15s;
+    display:flex; align-items:center; justify-content:center; gap:.35rem;
+  }
+  .add-btn:hover { background:#1a2f45; }
+  .add-btn:disabled { background:#e2e8f0; color:#b3c5cf; cursor:not-allowed; }
+
+  .low-stock-dot {
+    position:absolute; top:.6rem; right:.6rem;
+    width:7px; height:7px; border-radius:50%; background:#f59e0b;
+  }
+  .out-badge {
+    position:absolute; top:.6rem; right:.6rem;
+    background:#ef4444; color:#fff; font-size:.55rem; font-weight:700;
+    padding:.1rem .4rem; border-radius:4px; letter-spacing:.04em;
+  }
+
+  /* ── Cart panel ── */
+  .cart-panel {
+    position:sticky; top:1rem;
+    background:#fff; border:1px solid #e8edf2; border-radius:14px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.05);
+    overflow:hidden;
+  }
+  .cart-header {
+    background:#0d1b2a; padding:1rem 1.25rem;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .cart-title { font-size:.95rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:.5rem; }
+  .cart-badge {
+    background:#f59e0b; color:#0d1b2a;
+    font-size:.68rem; font-weight:800;
+    padding:.15rem .5rem; border-radius:999px; min-width:20px; text-align:center;
+  }
+
+  .cart-body { padding:1rem; }
+
+  /* selects in cart */
+  .cart-select {
+    width:100%; border:1.5px solid #e2e8f0; border-radius:9px;
+    font-family:'DM Sans',sans-serif; font-size:.82rem;
+    padding:.58rem .85rem; background:#fafbfc; color:#0d1b2a; outline:none;
+    transition:border-color .2s; appearance:none; margin-bottom:.75rem;
+    cursor:pointer;
+  }
+  .cart-select:focus { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
+
+  .cart-label { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#7d97ac; margin-bottom:.35rem; display:block; }
+
+  .cart-divider { height:1px; background:#f0f4f8; margin:.75rem 0; }
+
+  /* cart items */
+  .cart-items { max-height:300px; overflow-y:auto; }
+  .cart-items::-webkit-scrollbar { width:0; }
+
+  .cart-empty {
+    text-align:center; padding:2rem 1rem; color:#7d97ac;
+    font-size:.82rem;
+  }
+  .cart-empty i { font-size:1.5rem; opacity:.2; display:block; margin-bottom:.5rem; }
+
+  .cart-item {
+    background:#f8fafc; border:1px solid #e8edf2; border-radius:10px;
+    padding:.65rem .75rem; margin-bottom:.5rem;
+  }
+  .cart-item-name   { font-size:.82rem; font-weight:600; color:#0d1b2a; margin-bottom:.15rem; }
+  .cart-item-price  { font-size:.72rem; color:#7d97ac; }
+  .cart-item-bottom { display:flex; justify-content:space-between; align-items:center; margin-top:.5rem; }
+  .cart-item-total  { font-size:.88rem; font-weight:700; color:#10b981; font-family:'DM Mono',monospace; }
+
+  .qty-ctrl { display:flex; align-items:center; gap:.3rem; }
+  .qty-btn {
+    width:26px; height:26px; border-radius:7px; border:1.5px solid #e2e8f0;
+    background:#fff; font-size:.9rem; font-weight:700; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; color:#0d1b2a;
+    transition:all .12s; line-height:1;
+  }
+  .qty-btn:hover { background:#0d1b2a; border-color:#0d1b2a; color:#fff; }
+  .qty-val { min-width:24px; text-align:center; font-size:.85rem; font-weight:700; }
+
+  .rm-btn {
+    width:24px; height:24px; border-radius:6px; border:none;
+    background:#fef2f2; color:#ef4444; font-size:.72rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .12s;
+  }
+  .rm-btn:hover { background:#ef4444; color:#fff; }
+
+  /* cart total */
+  .cart-total-row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:.65rem 0; border-top:2px solid #f0f4f8;
+    margin-top:.5rem;
+  }
+  .cart-total-label { font-size:.82rem; font-weight:700; color:#0d1b2a; }
+  .cart-total-val   { font-size:1.2rem; font-weight:800; color:#0d1b2a; font-family:'DM Mono',monospace; }
+
+  /* checkout btn */
+  .checkout-btn {
+    width:100%; background:#10b981; border:none; border-radius:10px;
+    color:#fff; font-family:'DM Sans',sans-serif; font-size:.9rem; font-weight:700;
+    padding:.82rem; cursor:pointer; margin-top:.85rem;
+    transition:background .2s, transform .12s, box-shadow .2s;
+    display:flex; align-items:center; justify-content:center; gap:.5rem;
+  }
+  .checkout-btn:hover:not(:disabled) { background:#0ea271; box-shadow:0 8px 20px rgba(16,185,129,.3); transform:translateY(-1px); }
+  .checkout-btn:disabled { background:#e2e8f0; color:#b3c5cf; cursor:not-allowed; transform:none; box-shadow:none; }
+
+  .credit-warn {
+    background:#fef9c3; border:1px solid #fcd34d; border-radius:8px;
+    padding:.5rem .75rem; font-size:.75rem; color:#92400e; margin-top:.4rem;
+    display:none;
+  }
+
+  /* toast */
+  .sf-toast {
+    position:fixed; bottom:1.25rem; right:1.25rem; z-index:9999;
+    background:#0d1b2a; color:#fff; border-radius:10px;
+    padding:.75rem 1.1rem; font-size:.82rem; font-weight:500;
+    box-shadow:0 8px 24px rgba(0,0,0,.2);
+    animation:toastIn .25s ease;
+  }
+  .sf-toast.danger { background:#991b1b; }
+  .sf-toast.warning { background:#92400e; }
+  @keyframes toastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+  /* responsive */
+  @media (max-width:900px) {
+    .pos-layout { grid-template-columns:1fr; }
+    .cart-panel { position:static; }
+    .product-grid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
+  }
 </style>
 
-<div class="container-fluid mt-3 px-3">
-  <h1 class="mb-3">Point of Sale</h1>
+<h1 style="font-size:1.5rem;font-weight:700;letter-spacing:-.025em;margin-bottom:1.25rem;">Point of Sale</h1>
 
-  <div class="row g-3">
+<div class="pos-layout">
 
-    <!-- ── Product grid ── -->
-    <div class="col-12 col-lg-8 order-2 order-lg-1">
-      <input type="text" id="searchInput" class="form-control form-control-lg mb-3"
-             placeholder="🔍  Search products..." oninput="searchProducts()">
-
-      <div class="row g-2" id="productsGrid">
-        {% for product in products %}
-        <div class="col-6 col-sm-4 col-md-4 product-card" data-name="{{ product.name|lower }}">
-          <div class="card h-100 shadow-sm">
-            <div class="card-body text-center p-2">
-              <h6 class="card-title mb-1" style="font-size:.88rem;">{{ product.name }}</h6>
-              <p class="card-text mb-2" style="font-size:.8rem;color:#6b7280;">
-                Stock: <strong>{{ product.current_quantity }}</strong><br>
-                <strong class="text-success" style="font-size:.95rem;">KSh {{ "%.2f"|format(product.selling_price) }}</strong>
-              </p>
-              <button class="btn btn-primary btn-sm w-100 add-to-cart"
-                      data-id="{{ product._id }}"
-                      data-name="{{ product.name }}"
-                      data-price="{{ product.selling_price }}"
-                      data-stock="{{ product.current_quantity }}"
-                      {% if product.current_quantity <= 0 %}disabled{% endif %}>
-                <i class="fas fa-cart-plus"></i> Add
-              </button>
-            </div>
-          </div>
-        </div>
-        {% endfor %}
+  <!-- ── Product Grid ── -->
+  <div>
+    <input type="text" id="searchInput" class="pos-search"
+           placeholder="Search products…" oninput="searchProducts()">
+    <div class="product-grid" id="productsGrid">
+      {% for product in products %}
+      <div class="product-card {% if product.current_quantity <= 0 %}out{% endif %}"
+           data-name="{{ product.name|lower }}">
+        {% if product.current_quantity > 0 and product.current_quantity <= product.min_stock %}
+        <div class="low-stock-dot" title="Low stock"></div>
+        {% endif %}
+        {% if product.current_quantity <= 0 %}
+        <div class="out-badge">OUT</div>
+        {% endif %}
+        <div class="product-name">{{ product.name }}</div>
+        <div class="product-stock">Stock: {{ product.current_quantity }}</div>
+        <div class="product-price">KSh {{ "%.2f"|format(product.selling_price) }}</div>
+        <button class="add-btn add-to-cart"
+                data-id="{{ product._id }}"
+                data-name="{{ product.name }}"
+                data-price="{{ product.selling_price }}"
+                data-stock="{{ product.current_quantity }}"
+                {% if product.current_quantity <= 0 %}disabled{% endif %}>
+          <i class="fas fa-plus" style="font-size:.7rem;"></i> Add
+        </button>
       </div>
+      {% endfor %}
     </div>
-
-    <!-- ── Cart ── -->
-    <div class="col-12 col-lg-4 order-1 order-lg-2">
-      <div class="card shadow sticky-top" style="top:70px;">
-        <div class="card-header bg-success text-white">
-          <h5 class="mb-0">
-            <i class="fas fa-shopping-cart me-2"></i>Cart
-            <span id="cartCount" class="badge bg-white text-success ms-2" style="display:none;">0</span>
-          </h5>
-        </div>
-        <div class="card-body p-3">
-
-          <!-- Client -->
-          <div class="mb-2">
-            <label class="form-label fw-bold small mb-1">Client <span class="text-muted fw-normal">(Optional)</span></label>
-            <select class="form-select form-select-sm" id="clientSelect">
-              <option value="">-- Cash Sale, No Client --</option>
-              {% for client in clients %}
-              <option value="{{ client._id }}">{{ client.name }}{% if client.contact %} · {{ client.contact }}{% endif %}</option>
-              {% endfor %}
-            </select>
-            {% if not clients %}
-            <small class="text-warning d-block mt-1">
-              <i class="fas fa-exclamation-triangle me-1"></i>No clients yet — add clients to enable credit sales.
-            </small>
-            {% endif %}
-          </div>
-
-          <!-- Payment method -->
-          <div class="mb-3">
-            <label class="form-label fw-bold small mb-1">Payment Method</label>
-            <select class="form-select form-select-sm" id="paymentMethod">
-              <option value="cash">💵 Cash</option>
-              <option value="mpesa">📱 M-Pesa</option>
-              <option value="credit">📒 Credit (Client Balance)</option>
-            </select>
-            <div id="creditWarning">
-              <i class="fas fa-exclamation-circle me-1"></i>
-              You must select a client above to use Credit payment.
-            </div>
-          </div>
-
-          <hr class="my-2">
-
-          <!-- Cart items container — empty message is INSIDE and never moved -->
-          <div id="cartItems">
-            <p class="text-center text-muted small py-3" id="emptyMsg">
-              <i class="fas fa-shopping-basket me-1"></i>Cart is empty — tap a product to add it
-            </p>
-          </div>
-
-          <hr class="my-2">
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="fw-bold">Total</span>
-            <h5 class="mb-0 text-success fw-bold" id="cartTotal">KSh 0.00</h5>
-          </div>
-        </div>
-
-        <div class="card-footer p-2">
-          <button class="btn btn-success btn-lg w-100" id="checkoutBtn" disabled>
-            <i class="fas fa-cash-register me-2"></i>Checkout
-          </button>
-        </div>
-      </div>
-    </div>
-
   </div>
+
+  <!-- ── Cart ── -->
+  <div class="cart-panel">
+    <div class="cart-header">
+      <div class="cart-title">
+        <i class="fas fa-shopping-cart" style="font-size:.85rem;"></i>
+        Cart
+        <span class="cart-badge" id="cartBadge" style="display:none;">0</span>
+      </div>
+    </div>
+    <div class="cart-body">
+
+      <label class="cart-label">Client <span style="color:#7d97ac;text-transform:none;font-weight:400;">(optional)</span></label>
+      <select class="cart-select" id="clientSelect">
+        <option value="">— Cash sale, no client —</option>
+        {% for client in clients %}
+        <option value="{{ client._id }}">{{ client.name }}{% if client.contact %} · {{ client.contact }}{% endif %}</option>
+        {% endfor %}
+      </select>
+
+      <label class="cart-label">Payment Method</label>
+      <select class="cart-select" id="paymentMethod" style="margin-bottom:.3rem;">
+        <option value="cash">💵 Cash</option>
+        <option value="mpesa">📱 M-Pesa</option>
+        <option value="credit">📒 Credit</option>
+      </select>
+      <div class="credit-warn" id="creditWarn">
+        ⚠️ Select a client above to use Credit payment
+      </div>
+
+      <div class="cart-divider"></div>
+
+      <div class="cart-items" id="cartItems">
+        <div class="cart-empty" id="emptyMsg">
+          <i class="fas fa-shopping-basket"></i>
+          Cart is empty — tap a product to add
+        </div>
+      </div>
+
+      <div class="cart-total-row">
+        <span class="cart-total-label">Total</span>
+        <span class="cart-total-val" id="cartTotal">KSh 0.00</span>
+      </div>
+
+      <button class="checkout-btn" id="checkoutBtn" disabled>
+        <i class="fas fa-cash-register" style="font-size:.85rem;"></i> Checkout
+      </button>
+    </div>
+  </div>
+
 </div>
 
 <script>
 let cart = [];
 
-// ── Search ──────────────────────────────────────────────────
 function searchProducts() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   document.querySelectorAll('.product-card').forEach(c => {
@@ -128,187 +269,102 @@ function searchProducts() {
   });
 }
 
-// ── Add to cart ─────────────────────────────────────────────
 document.querySelectorAll('.add-to-cart').forEach(btn => {
   btn.addEventListener('click', function () {
     if (this.disabled) return;
-
-    const id    = String(this.dataset.id);   // ensure string comparison
-    const name  = this.dataset.name;
-    const price = parseFloat(this.dataset.price);
-    const stock = parseInt(this.dataset.stock);
-
-    // Find by string id to avoid ObjectId reference mismatch
-    const existingIndex = cart.findIndex(i => i.id === id);
-
-    if (existingIndex > -1) {
-      if (cart[existingIndex].quantity >= stock) {
-        showToast(`Only ${stock} units of "${name}" in stock`, 'warning');
-        return;
-      }
-      cart[existingIndex].quantity += 1;
+    const id = String(this.dataset.id), name = this.dataset.name,
+          price = parseFloat(this.dataset.price), stock = parseInt(this.dataset.stock);
+    const idx = cart.findIndex(i => i.id === id);
+    if (idx > -1) {
+      if (cart[idx].quantity >= stock) { showToast(`Only ${stock} units in stock`, 'warning'); return; }
+      cart[idx].quantity++;
     } else {
-      cart.push({ id, name, price, quantity: 1, stock });
+      cart.push({ id, name, price, quantity:1, stock });
     }
     renderCart();
   });
 });
 
-// ── Render cart ─────────────────────────────────────────────
 function renderCart() {
   const container = document.getElementById('cartItems');
-
-  // ALWAYS clear only the cart-item divs, never touch #emptyMsg via innerHTML
-  // Remove all cart-item elements manually
   container.querySelectorAll('.cart-item').forEach(el => el.remove());
+  const empty = document.getElementById('emptyMsg');
+  const badge = document.getElementById('cartBadge');
+  const total = document.getElementById('cartTotal');
+  const btn   = document.getElementById('checkoutBtn');
 
-  const emptyMsg   = document.getElementById('emptyMsg');
-  const cartTotal  = document.getElementById('cartTotal');
-  const checkoutBtn = document.getElementById('checkoutBtn');
-  const cartCount  = document.getElementById('cartCount');
-
-  if (cart.length === 0) {
-    emptyMsg.style.display  = '';
-    cartTotal.textContent   = 'KSh 0.00';
-    checkoutBtn.disabled    = true;
-    cartCount.style.display = 'none';
-    return;
+  if (!cart.length) {
+    empty.style.display=''; total.textContent='KSh 0.00';
+    btn.disabled=true; badge.style.display='none'; return;
   }
-
-  // Hide empty message
-  emptyMsg.style.display = 'none';
-
-  let total = 0;
-
+  empty.style.display='none';
+  let sum=0;
   cart.forEach((item, i) => {
-    const lineTotal = item.quantity * item.price;
-    total += lineTotal;
-
+    const line = item.quantity * item.price; sum += line;
     const div = document.createElement('div');
-    div.className = 'cart-item';
-    div.innerHTML = `
+    div.className='cart-item';
+    div.innerHTML=`
       <div class="d-flex justify-content-between align-items-start">
-        <div style="flex:1;min-width:0;margin-right:.5rem;">
-          <div class="fw-semibold text-truncate" style="font-size:.85rem;">${item.name}</div>
-          <div class="text-muted" style="font-size:.75rem;">KSh ${item.price.toFixed(2)} each</div>
-          <div class="qty-box mt-1">
-            <button class="qty-dec" data-i="${i}">−</button>
-            <span>${item.quantity}</span>
-            <button class="qty-inc" data-i="${i}">+</button>
-          </div>
+        <div>
+          <div class="cart-item-name">${item.name}</div>
+          <div class="cart-item-price">KSh ${item.price.toFixed(2)} each</div>
         </div>
-        <div class="text-end flex-shrink-0">
-          <div class="fw-bold text-success" style="font-size:.88rem;">KSh ${lineTotal.toFixed(2)}</div>
-          <button class="btn btn-sm btn-outline-danger mt-1 remove-item" data-i="${i}"
-                  style="padding:1px 7px;font-size:.75rem;">
-            <i class="fas fa-trash"></i>
-          </button>
+        <button class="rm-btn remove-item" data-i="${i}"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="cart-item-bottom">
+        <div class="qty-ctrl">
+          <button class="qty-btn qty-dec" data-i="${i}">−</button>
+          <span class="qty-val">${item.quantity}</span>
+          <button class="qty-btn qty-inc" data-i="${i}">+</button>
         </div>
+        <div class="cart-item-total">KSh ${line.toFixed(2)}</div>
       </div>`;
-
-    // Insert before the emptyMsg so order is preserved
-    container.insertBefore(div, emptyMsg);
+    container.insertBefore(div, empty);
   });
-
-  cartTotal.textContent   = 'KSh ' + total.toFixed(2);
-  checkoutBtn.disabled    = false;
-  cartCount.textContent   = cart.reduce((s, i) => s + i.quantity, 0);
-  cartCount.style.display = '';
+  total.textContent = 'KSh ' + sum.toFixed(2);
+  btn.disabled = false;
+  badge.textContent = cart.reduce((s,i)=>s+i.quantity,0);
+  badge.style.display='';
 }
 
-// ── Cart interactions ────────────────────────────────────────
-document.getElementById('cartItems').addEventListener('click', function (e) {
-  const dec = e.target.closest('.qty-dec');
-  const inc = e.target.closest('.qty-inc');
-  const rem = e.target.closest('.remove-item');
-
-  if (dec) {
-    const i = parseInt(dec.dataset.i);
-    cart[i].quantity -= 1;
-    if (cart[i].quantity <= 0) cart.splice(i, 1);
-    renderCart();
-  } else if (inc) {
-    const i = parseInt(inc.dataset.i);
-    if (cart[i].quantity >= cart[i].stock) {
-      showToast(`Only ${cart[i].stock} units in stock`, 'warning');
-      return;
-    }
-    cart[i].quantity += 1;
-    renderCart();
-  } else if (rem) {
-    cart.splice(parseInt(rem.dataset.i), 1);
-    renderCart();
-  }
+document.getElementById('cartItems').addEventListener('click', e => {
+  const dec=e.target.closest('.qty-dec'), inc=e.target.closest('.qty-inc'), rem=e.target.closest('.remove-item');
+  if (dec) { const i=+dec.dataset.i; cart[i].quantity--; if(!cart[i].quantity) cart.splice(i,1); renderCart(); }
+  else if (inc) { const i=+inc.dataset.i; if(cart[i].quantity>=cart[i].stock){showToast(`Only ${cart[i].stock} in stock`,'warning');return;} cart[i].quantity++; renderCart(); }
+  else if (rem) { cart.splice(+rem.dataset.i,1); renderCart(); }
 });
 
-// ── Credit warning ───────────────────────────────────────────
-document.getElementById('paymentMethod').addEventListener('change', function () {
-  const warn = document.getElementById('creditWarning');
+document.getElementById('paymentMethod').addEventListener('change', function(){
   const hasClient = document.getElementById('clientSelect').value !== '';
-  warn.style.display = (this.value === 'credit' && !hasClient) ? 'block' : 'none';
+  document.getElementById('creditWarn').style.display = (this.value==='credit'&&!hasClient) ? 'block' : 'none';
+});
+document.getElementById('clientSelect').addEventListener('change', function(){
+  if(this.value) document.getElementById('creditWarn').style.display='none';
 });
 
-document.getElementById('clientSelect').addEventListener('change', function () {
-  if (this.value !== '') {
-    document.getElementById('creditWarning').style.display = 'none';
-  }
-});
-
-// ── Checkout ─────────────────────────────────────────────────
-document.getElementById('checkoutBtn').addEventListener('click', function () {
-  if (cart.length === 0) return;
-
-  const clientId = document.getElementById('clientSelect').value || null;
+document.getElementById('checkoutBtn').addEventListener('click', function(){
+  if(!cart.length) return;
+  const clientId = document.getElementById('clientSelect').value||null;
   const method   = document.getElementById('paymentMethod').value;
-
-  if (method === 'credit' && !clientId) {
-    document.getElementById('creditWarning').style.display = 'block';
-    document.getElementById('clientSelect').focus();
-    showToast('Please select a client to use Credit payment', 'danger');
-    return;
-  }
-
-  const items = cart.map(item => ({
-    product_id:    item.id,
-    quantity:      item.quantity,
-    selling_price: item.price
-  }));
-
-  this.disabled  = true;
-  this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
-
-  fetch('/pos/checkout', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ items, payment_method: method, client_id: clientId })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.success) {
-      cart = [];
-      renderCart();
-      window.location.href = data.redirect;
-    } else {
-      showToast(data.message || 'Sale failed. Please try again.', 'danger');
-    }
-  })
-  .catch(() => showToast('Network error. Please try again.', 'danger'))
-  .finally(() => {
-    const btn     = document.getElementById('checkoutBtn');
-    btn.disabled  = cart.length === 0;
-    btn.innerHTML = '<i class="fas fa-cash-register me-2"></i>Checkout';
-  });
+  if(method==='credit'&&!clientId){ document.getElementById('creditWarn').style.display='block'; showToast('Select a client for Credit payment','danger'); return; }
+  const items = cart.map(i=>({product_id:i.id,quantity:i.quantity,selling_price:i.price}));
+  this.disabled=true; this.innerHTML='<i class="fas fa-spinner fa-spin" style="font-size:.85rem;"></i> Processing…';
+  fetch('/pos/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,payment_method:method,client_id:clientId})})
+    .then(r=>r.json()).then(d=>{
+      if(d.success){cart=[];renderCart();window.location.href=d.redirect;}
+      else showToast(d.message||'Sale failed. Try again.','danger');
+    }).catch(()=>showToast('Network error. Try again.','danger'))
+    .finally(()=>{
+      const b=document.getElementById('checkoutBtn');
+      b.disabled=!cart.length; b.innerHTML='<i class="fas fa-cash-register" style="font-size:.85rem;"></i> Checkout';
+    });
 });
 
-// ── Toast ────────────────────────────────────────────────────
-function showToast(msg, type = 'info') {
-  const t = document.createElement('div');
-  t.className = `alert alert-${type} shadow`;
-  t.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;min-width:260px;font-size:.875rem;';
-  t.textContent = msg;
+function showToast(msg,type='info'){
+  const t=document.createElement('div');
+  t.className=`sf-toast ${type}`; t.textContent=msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3500);
+  setTimeout(()=>t.remove(),3500);
 }
 </script>
-
 {% endblock %}

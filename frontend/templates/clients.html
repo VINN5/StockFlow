@@ -2,142 +2,172 @@
 {% from 'import_export_ui.html' import import_export_bar, duplicates_modal, import_summary_alert %}
 {% block title %}Clients - StockFlow{% endblock %}
 {% block content %}
-<div class="container-fluid mt-4 px-3">
-    <h1 class="mb-4">Client Management</h1>
+<style>
+  .sf-page-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.75rem; }
+  .sf-page-title  { font-size:1.5rem; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .sf-page-sub    { font-size:.82rem; color:#7d97ac; margin-top:.2rem; }
+  .sf-card        { background:#fff; border:1px solid #e8edf2; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04); overflow:hidden; }
+  .sf-label { display:block; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#7d97ac; margin-bottom:.45rem; }
+  .sf-input { width:100%; border:1.5px solid #e2e8f0; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:.9rem; padding:.72rem 1rem; background:#fafbfc; color:#0d1b2a; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; appearance:none; }
+  .sf-input:focus { border-color:#f59e0b; background:#fff; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
 
-    {{ import_summary_alert(import_summary) }}
-    {{ duplicates_modal(pending_duplicates, url_for('clients.resolve_duplicates'), 'client') }}
+  .balance-owed { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+  .balance-ok   { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
+  .balance-zero { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
 
-    {% if not is_super_admin %}
-    <div class="alert alert-info mb-3">
-        <i class="fas fa-info-circle me-2"></i>
-        <strong>Verify KRA PIN:</strong>
-        <a href="https://itax.kra.go.ke/KRA-Portal/pinChecker.htm" target="_blank" class="alert-link">
-            itax.kra.go.ke <i class="fas fa-external-link-alt ms-1"></i>
-        </a>
-    </div>
+  .req-btn {
+    display:inline-flex; align-items:center; gap:.4rem;
+    font-size:.75rem; font-weight:600; padding:.32rem .75rem;
+    border-radius:8px; border:1.5px solid #e2e8f0;
+    background:#fef9c3; color:#92400e; text-decoration:none;
+    border-color:rgba(245,158,11,.35);
+    transition:all .15s;
+  }
+  .req-btn:hover { background:#f59e0b; color:#fff; border-color:#f59e0b; }
 
-    <div class="card shadow mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 class="mb-0">Add New Client</h5>
-            {{ import_export_bar(
-                url_for('clients.export'),
-                url_for('clients.import_excel')
-            ) }}
-        </div>
-        <div class="card-body">
-            <form method="POST" action="{{ url_for('clients.add') }}">
-                <div class="row g-3">
-                    <div class="col-12 col-md-4">
-                        <label class="form-label">Name *</label>
-                        <input type="text" name="name" class="form-control" required>
-                    </div>
-                    <div class="col-12 col-md-3">
-                        <label class="form-label">Contact</label>
-                        <input type="text" name="contact" class="form-control" placeholder="e.g., 0712345678">
-                    </div>
-                    <div class="col-12 col-md-3">
-                        <label class="form-label">KRA PIN</label>
-                        <input type="text" name="kra_pin" class="form-control" placeholder="e.g., A00123456B"
-                               pattern="[AP][0-9]{9}[A-Z]"
-                               title="KRA PIN format: A or P + 9 digits + letter">
-                        <small class="form-text text-muted">Optional</small>
-                    </div>
-                    <div class="col-12 col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-success w-100">Add Client</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-    {% endif %}
+  .biz-group-header { display:flex; align-items:center; gap:.65rem; padding:1.25rem 1.5rem .75rem; border-bottom:1px solid #f0f4f8; }
+  .biz-badge { display:inline-flex; align-items:center; gap:.45rem; background:#0d1b2a; color:rgba(255,255,255,.85); border-radius:9px; padding:.35rem .8rem; font-size:.78rem; font-weight:600; }
 
-    {% if is_super_admin %}
-    {% for biz_name, biz_clients in grouped.items() %}
-    <div class="mb-5">
-        <div class="d-flex align-items-center mb-3 gap-2">
-            <span class="badge bg-primary fs-6 px-3 py-2">
-                <i class="fas fa-building me-2"></i>{{ biz_name }}
-            </span>
-            <span class="badge bg-secondary">{{ biz_clients|length }} client{{ 's' if biz_clients|length != 1 }}</span>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-striped table-card-mobile">
-                <thead class="table-dark">
-                    <tr><th>Name</th><th>Contact</th><th>KRA PIN</th><th>Balance</th></tr>
-                </thead>
-                <tbody>
-                    {% for client in biz_clients %}
-                    <tr>
-                        <td><strong>{{ client.name }}</strong></td>
-                        <td>{{ client.contact or '—' }}</td>
-                        <td>{{ client.kra_pin or '—' }}</td>
-                        <td>
-                            {% if client.balance > 0 %}
-                            <span class="badge bg-danger">KSh {{ "%.2f"|format(client.balance) }}</span>
-                            {% elif client.balance < 0 %}
-                            <span class="badge bg-success">KSh {{ "%.2f"|format(client.balance * -1) }} (Overpaid)</span>
-                            {% else %}
-                            <span class="badge bg-secondary">KSh 0.00</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% else %}
-    <div class="alert alert-info">No clients found in any business.</div>
-    {% endfor %}
+  .add-form-card { background:#fff; border:1px solid #e8edf2; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.04); overflow:hidden; margin-bottom:1.5rem; }
+  .add-form-head { background:#0d1b2a; padding:.9rem 1.4rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.75rem; }
+  .add-form-head-title { font-size:.9rem; font-weight:700; color:#fff; }
+  .add-form-body { padding:1.25rem 1.4rem; }
 
-    {% else %}
-    <h3 class="mb-3">Current Clients</h3>
-    <div class="table-responsive">
-        <table class="table table-striped table-card-mobile">
-            <thead class="table-dark">
-                <tr>
-                    <th>Name</th><th>Contact</th><th>KRA PIN</th><th>Balance (Credit Owed)</th>
-                    {% if session.role == 'admin' %}<th>Actions</th>{% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for client in clients %}
-                <tr>
-                    <td><strong>{{ client.name }}</strong></td>
-                    <td>{{ client.contact or '—' }}</td>
-                    <td>{{ client.kra_pin or '—' }}</td>
-                    <td>
-                        {% if client.balance > 0 %}
-                        <span class="badge bg-danger">KSh {{ "%.2f"|format(client.balance) }}</span>
-                        {% elif client.balance < 0 %}
-                        <span class="badge bg-success">KSh {{ "%.2f"|format(client.balance * -1) }} (Overpaid)</span>
-                        {% else %}
-                        <span class="badge bg-secondary">KSh 0.00</span>
-                        {% endif %}
-                    </td>
-                    {% if session.role == 'admin' %}
-                    <td>
-                        {% if client.balance > 0 %}
-                        <a href="{{ url_for('payments.request_payment', client_id=client._id) }}"
-                           class="btn btn-sm btn-warning">
-                            <i class="fas fa-bell me-1"></i>Request Payment
-                        </a>
-                        {% else %}
-                        <span class="text-muted small">No balance</span>
-                        {% endif %}
-                    </td>
-                    {% endif %}
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="{{ 5 if session.role == 'admin' else 4 }}"
-                        class="text-center text-muted py-4">No clients yet. Add one above!</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
+  .kra-notice {
+    display:flex; align-items:center; gap:.6rem;
+    background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;
+    padding:.65rem .9rem; font-size:.78rem; color:#1e40af;
+    margin-bottom:1.25rem;
+  }
+</style>
+
+<div class="sf-page-header">
+  <div>
+    <h1 class="sf-page-title">Client Management</h1>
+    <div class="sf-page-sub">Manage clients, credit balances, and payment requests</div>
+  </div>
 </div>
+
+{{ import_summary_alert(import_summary) }}
+{{ duplicates_modal(pending_duplicates, url_for('clients.resolve_duplicates'), 'client') }}
+
+{% if not is_super_admin %}
+
+  <div class="kra-notice">
+    <i class="fas fa-info-circle" style="flex-shrink:0;"></i>
+    Verify KRA PIN at
+    <a href="https://itax.kra.go.ke/KRA-Portal/pinChecker.htm" target="_blank" style="color:#1e40af;font-weight:600;">
+      itax.kra.go.ke <i class="fas fa-external-link-alt" style="font-size:.65rem;"></i>
+    </a>
+  </div>
+
+  <div class="add-form-card">
+    <div class="add-form-head">
+      <span class="add-form-head-title"><i class="fas fa-user-plus me-2" style="color:#f59e0b;"></i>Add New Client</span>
+      {{ import_export_bar(url_for('clients.export'), url_for('clients.import_excel')) }}
+    </div>
+    <div class="add-form-body">
+      <form method="POST" action="{{ url_for('clients.add') }}">
+        <div class="row g-3 align-items-end">
+          <div class="col-12 col-md-4">
+            <label class="sf-label">Name <span style="color:#ef4444;">*</span></label>
+            <input type="text" name="name" class="sf-input" required placeholder="Client full name">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="sf-label">Contact</label>
+            <input type="text" name="contact" class="sf-input" placeholder="0712345678">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="sf-label">KRA PIN <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+            <input type="text" name="kra_pin" class="sf-input" placeholder="A00123456B"
+                   pattern="[AP][0-9]{9}[A-Z]"
+                   title="KRA PIN: A or P + 9 digits + letter">
+          </div>
+          <div class="col-12 col-md-2">
+            <button type="submit" class="btn btn-success w-100" style="padding:.72rem;">Add Client</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+{% endif %}
+
+{% if is_super_admin %}
+
+  {% for biz_name, biz_clients in grouped.items() %}
+  <div class="sf-card mb-4">
+    <div class="biz-group-header">
+      <div class="biz-badge"><i class="fas fa-building" style="font-size:.7rem;opacity:.6;"></i> {{ biz_name }}</div>
+      <span style="font-size:.78rem;color:#7d97ac;">{{ biz_clients|length }} client{{ 's' if biz_clients|length != 1 }}</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle table-card-mobile mb-0">
+        <thead><tr><th>Name</th><th>Contact</th><th>KRA PIN</th><th>Balance</th></tr></thead>
+        <tbody>
+          {% for client in biz_clients %}
+          <tr>
+            <td data-label="Name"><strong>{{ client.name }}</strong></td>
+            <td data-label="Contact" style="font-family:'DM Mono',monospace;font-size:.83rem;">{{ client.contact or '—' }}</td>
+            <td data-label="KRA PIN" style="font-family:'DM Mono',monospace;font-size:.83rem;">{{ client.kra_pin or '—' }}</td>
+            <td data-label="Balance">
+              {% if client.balance > 0 %}<span class="badge balance-owed">KSh {{ "%.2f"|format(client.balance) }} owed</span>
+              {% elif client.balance < 0 %}<span class="badge balance-ok">KSh {{ "%.2f"|format(client.balance * -1) }} (Overpaid)</span>
+              {% else %}<span class="badge balance-zero">KSh 0.00</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info">No clients found in any business.</div>
+  {% endfor %}
+
+{% else %}
+
+  <div class="sf-card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle table-card-mobile mb-0">
+        <thead>
+          <tr><th>Name</th><th>Contact</th><th>KRA PIN</th><th>Balance</th>{% if session.role == 'admin' %}<th>Action</th>{% endif %}</tr>
+        </thead>
+        <tbody>
+          {% for client in clients %}
+          <tr>
+            <td data-label="Name"><strong>{{ client.name }}</strong></td>
+            <td data-label="Contact" style="font-family:'DM Mono',monospace;font-size:.83rem;">{{ client.contact or '—' }}</td>
+            <td data-label="KRA PIN" style="font-family:'DM Mono',monospace;font-size:.83rem;">{{ client.kra_pin or '—' }}</td>
+            <td data-label="Balance">
+              {% if client.balance > 0 %}<span class="badge balance-owed">KSh {{ "%.2f"|format(client.balance) }} owed</span>
+              {% elif client.balance < 0 %}<span class="badge balance-ok">KSh {{ "%.2f"|format(client.balance * -1) }} (Overpaid)</span>
+              {% else %}<span class="badge balance-zero">KSh 0.00</span>{% endif %}
+            </td>
+            {% if session.role == 'admin' %}
+            <td data-label="Action">
+              {% if client.balance > 0 %}
+              <a href="{{ url_for('payments.request_payment', client_id=client._id) }}" class="req-btn">
+                <i class="fas fa-bell" style="font-size:.72rem;"></i> Request
+              </a>
+              {% else %}<span style="font-size:.75rem;color:#b3c5cf;">—</span>{% endif %}
+            </td>
+            {% endif %}
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="{{ 5 if session.role=='admin' else 4 }}">
+              <div style="text-align:center;padding:3rem;color:#7d97ac;">
+                <i class="fas fa-user-friends" style="font-size:2rem;opacity:.2;display:block;margin-bottom:.75rem;"></i>
+                No clients yet — add one above
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% endif %}
 {% endblock %}

@@ -1,73 +1,125 @@
 {% extends "base.html" %}
-
 {% block title %}Edit Product - StockFlow{% endblock %}
-
 {% block content %}
-<div class="container-fluid mt-4 px-3">
-    <h1 class="mb-4">Edit Product</h1>
+<style>
+  .sf-label { display:block; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#7d97ac; margin-bottom:.45rem; }
+  .sf-input { width:100%; border:1.5px solid #e2e8f0; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:.92rem; padding:.72rem 1rem; background:#fafbfc; color:#0d1b2a; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; appearance:none; }
+  .sf-input:focus { border-color:#f59e0b; background:#fff; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
+  .sf-hint { font-size:.72rem; color:#7d97ac; margin-top:.35rem; display:flex; align-items:center; gap:.3rem; }
 
-    <div class="row">
-        <div class="col-12 col-lg-8">
-            <div class="card shadow">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">Update Product Details</h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST">
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <label class="form-label fw-bold">Name <span class="text-danger">*</span></label>
-                                <input type="text" name="name" class="form-control" value="{{ product.name }}" required>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label fw-bold">Unit</label>
-                                <select name="unit" class="form-select">
-                                    <option value="piece" {% if product.unit == 'piece' %}selected{% endif %}>Piece</option>
-                                    <option value="kg" {% if product.unit == 'kg' %}selected{% endif %}>Kg</option>
-                                    <option value="liter" {% if product.unit == 'liter' %}selected{% endif %}>Liter</option>
-                                    <option value="bag" {% if product.unit == 'bag' %}selected{% endif %}>Bag</option>
-                                    <option value="box" {% if product.unit == 'box' %}selected{% endif %}>Box</option>
-                                    <option value="pack" {% if product.unit == 'pack' %}selected{% endif %}>Pack</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label fw-bold">Description</label>
-                                <textarea name="description" class="form-control" rows="2">{{ product.description or '' }}</textarea>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-bold">Purchase Price (KSh) <span class="text-danger">*</span></label>
-                                <input type="number" step="0.01" name="purchase_price" class="form-control"
-                                       value="{{ product.purchase_price }}" required>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-bold">Selling Price (KSh) <span class="text-danger">*</span></label>
-                                <input type="number" step="0.01" name="selling_price" class="form-control"
-                                       value="{{ product.selling_price }}" required>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label fw-bold">Current Stock Quantity</label>
-                                <input type="number" name="current_quantity" class="form-control"
-                                       value="{{ product.current_quantity }}" min="0">
-                                <small class="form-text text-muted">Updates automatically from sales/purchases.</small>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label fw-bold">Minimum Stock</label>
-                                <input type="number" name="min_stock" class="form-control" value="{{ product.min_stock }}">
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label fw-bold">Maximum Stock (optional)</label>
-                                <input type="number" name="max_stock" class="form-control" value="{{ product.max_stock or '' }}">
-                            </div>
-                        </div>
+  .edit-card {
+    background:#fff; border:1px solid #e8edf2; border-radius:16px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);
+    overflow:hidden; max-width:740px;
+  }
+  .edit-card-head {
+    background:#0d1b2a; padding:1.25rem 1.5rem;
+    display:flex; align-items:center; gap:.75rem;
+  }
+  .edit-card-head-icon {
+    width:38px; height:38px; background:rgba(245,158,11,.18);
+    border-radius:10px; display:flex; align-items:center; justify-content:center;
+    color:#f59e0b; flex-shrink:0;
+  }
+  .edit-card-head-title { font-size:1rem; font-weight:700; color:#fff; margin:0; }
+  .edit-card-head-sub   { font-size:.75rem; color:rgba(255,255,255,.4); margin-top:.1rem; }
+  .edit-body { padding:1.75rem 1.5rem; }
 
-                        <div class="mt-4 d-grid gap-2 d-sm-flex">
-                            <button type="submit" class="btn btn-success btn-lg flex-grow-1">Save Changes</button>
-                            <a href="/products" class="btn btn-secondary btn-lg">Cancel</a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+  .sf-breadcrumb { display:flex; align-items:center; gap:.5rem; font-size:.78rem; color:#7d97ac; margin-bottom:1.5rem; }
+  .sf-breadcrumb a { color:#7d97ac; text-decoration:none; }
+  .sf-breadcrumb a:hover { color:#0d1b2a; }
+  .sf-breadcrumb-cur { color:#0d1b2a; font-weight:600; }
+  .sf-breadcrumb-sep { opacity:.4; }
+
+  .price-group { position:relative; }
+  .price-pre {
+    position:absolute; left:0; top:0; bottom:0; width:52px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.8rem; font-weight:600; color:#7d97ac;
+    border-right:1.5px solid #e2e8f0; pointer-events:none;
+    background:#f8fafc; border-radius:10px 0 0 10px;
+  }
+  .price-group .sf-input { padding-left:60px; }
+</style>
+
+<div class="sf-breadcrumb">
+  <a href="/products">Products</a>
+  <span class="sf-breadcrumb-sep">/</span>
+  <span class="sf-breadcrumb-cur">Edit — {{ product.name }}</span>
+</div>
+
+<h1 style="font-size:1.45rem;font-weight:700;letter-spacing:-.025em;margin-bottom:1.5rem;">Edit Product</h1>
+
+<div class="edit-card">
+  <div class="edit-card-head">
+    <div class="edit-card-head-icon"><i class="fas fa-box" style="font-size:.9rem;"></i></div>
+    <div>
+      <div class="edit-card-head-title">{{ product.name }}</div>
+      <div class="edit-card-head-sub">Update product details below</div>
     </div>
+  </div>
+
+  <div class="edit-body">
+    <form method="POST">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="sf-label">Name <span style="color:#ef4444;">*</span></label>
+          <input type="text" name="name" class="sf-input" value="{{ product.name }}" required>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="sf-label">Unit</label>
+          <select name="unit" class="sf-input">
+            {% for u in ['piece','kg','liter','bag','box','pack'] %}
+            <option value="{{ u }}" {% if product.unit == u %}selected{% endif %}>{{ u|capitalize }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="sf-label">Description</label>
+          <textarea name="description" class="sf-input" rows="2">{{ product.description or '' }}</textarea>
+        </div>
+
+        <div class="col-12"><div style="height:1px;background:#f0f4f8;margin:.25rem 0;"></div></div>
+
+        <div class="col-12 col-md-4">
+          <label class="sf-label">Purchase Price <span style="color:#ef4444;">*</span></label>
+          <div class="price-group">
+            <div class="price-pre">KSh</div>
+            <input type="number" step="0.01" name="purchase_price" class="sf-input" value="{{ product.purchase_price }}" required>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="sf-label">Selling Price <span style="color:#ef4444;">*</span></label>
+          <div class="price-group">
+            <div class="price-pre">KSh</div>
+            <input type="number" step="0.01" name="selling_price" class="sf-input" value="{{ product.selling_price }}" required>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="sf-label">Current Stock</label>
+          <input type="number" name="current_quantity" class="sf-input" value="{{ product.current_quantity }}" min="0">
+          <div class="sf-hint">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#7d97ac"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            Auto-updates from sales & purchases
+          </div>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="sf-label">Minimum Stock</label>
+          <input type="number" name="min_stock" class="sf-input" value="{{ product.min_stock }}">
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="sf-label">Maximum Stock <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.7rem;">(optional)</span></label>
+          <input type="number" name="max_stock" class="sf-input" value="{{ product.max_stock or '' }}" placeholder="Leave blank for unlimited">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1.75rem;padding-top:1.25rem;border-top:1px solid #f0f4f8;">
+        <button type="submit" class="btn btn-success" style="flex:1;min-width:140px;padding:.78rem;">
+          <i class="fas fa-check me-2" style="font-size:.85rem;"></i>Save Changes
+        </button>
+        <a href="/products" class="btn btn-outline-secondary" style="padding:.78rem 1.25rem;">Cancel</a>
+      </div>
+    </form>
+  </div>
 </div>
 {% endblock %}

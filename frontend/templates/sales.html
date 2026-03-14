@@ -1,346 +1,350 @@
 {% extends "base.html" %}
 {% block title %}Sales - StockFlow{% endblock %}
 {% block content %}
-
 <style>
-.report-card { background:#fff; border-radius:14px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06); padding:1.25rem; }
-.stat-pill { border-radius:12px; padding:.6rem 1rem; font-size:.82rem; font-weight:600; }
-.low-stock-badge { font-size:.72rem; }
+  /* ── Daily report cards ── */
+  .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:.85rem; margin-bottom:1.25rem; }
+  .stat-card { background:#fff; border:1px solid #e8edf2; border-radius:14px; padding:1.1rem 1.25rem; box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 12px rgba(0,0,0,.04); }
+  .stat-label { font-size:.63rem; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:#7d97ac; margin-bottom:.3rem; }
+  .stat-val   { font-size:1.5rem; font-weight:800; letter-spacing:-.03em; line-height:1; }
+  .stat-sub   { font-size:.68rem; color:#b3c5cf; margin-top:.25rem; }
+  .stat-blue   .stat-val { color:#2563eb; }
+  .stat-green  .stat-val { color:#10b981; }
+  .stat-purple .stat-val { color:#7c3aed; }
+  .stat-red    .stat-val { color:#ef4444; }
+  .stat-ok     .stat-val { color:#10b981; }
 
-/* ── History section ── */
-.hist-section { background:#fff; border-radius:14px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06); overflow:hidden; margin-bottom:1rem; }
-.hist-day-header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:.85rem 1.25rem; cursor:pointer; user-select:none;
-  background:#f9fafb; border-bottom:1px solid transparent;
-  transition:background .15s;
-}
-.hist-day-header:hover { background:#f3f4f6; }
-.hist-day-header.open { background:#fff; border-bottom:1px solid #e5e7eb; }
-.hist-day-left { display:flex; align-items:center; gap:.75rem; }
-.hist-day-date { font-size:.95rem; font-weight:700; color:#111827; }
-.hist-day-sub  { font-size:.75rem; color:#6b7280; margin-top:.1rem; }
-.hist-day-pills { display:flex; gap:.5rem; flex-wrap:wrap; }
-.hist-pill { font-size:.72rem; font-weight:600; padding:.2rem .65rem; border-radius:999px; }
-.hp-rev  { background:#ecfdf5; color:#059669; }
-.hp-prof { background:#f5f3ff; color:#7c3aed; }
-.hp-cnt  { background:#eff6ff; color:#2563eb; }
-.hp-cash { background:#dcfce7; color:#166534; }
-.hp-mpesa{ background:#fef9c3; color:#92400e; }
-.hp-cred { background:#fee2e2; color:#991b1b; }
-.hist-chevron { font-size:.8rem; color:#9ca3af; transition:transform .2s; }
-.hist-chevron.open { transform:rotate(180deg); }
-.hist-body { display:none; padding:1rem 1.25rem 1.25rem; }
-.hist-body.open { display:block; }
-.hist-table { width:100%; border-collapse:collapse; font-size:.84rem; }
-.hist-table thead th { padding:.55rem .9rem; font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#6b7280; border-bottom:1px solid #e5e7eb; text-align:left; background:#f9fafb; }
-.hist-table tbody tr:hover { background:#f9fafb; }
-.hist-table tbody td { padding:.7rem .9rem; border-bottom:1px solid #f3f4f6; vertical-align:top; }
-.hist-table tbody tr:last-child td { border-bottom:none; }
-.hist-table tfoot td { padding:.65rem .9rem; background:#f9fafb; font-weight:700; font-size:.84rem; border-top:2px solid #e5e7eb; }
-.hist-items { margin:0; padding-left:1rem; }
-.hist-items li { font-size:.78rem; color:#374151; line-height:1.6; }
-.hist-no-sales { text-align:center; padding:2rem; color:#9ca3af; font-size:.85rem; }
+  /* pay breakdown */
+  .pay-bar { background:#fff; border:1px solid #e8edf2; border-radius:14px; padding:1.1rem 1.25rem; box-shadow:0 1px 3px rgba(0,0,0,.04); margin-bottom:1rem; }
+  .pay-bar-title { font-size:.63rem; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:#7d97ac; margin-bottom:.85rem; }
+  .pay-methods { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; }
+  .pay-method { border-radius:10px; padding:.75rem 1rem; text-align:center; }
+  .pay-method-label { font-size:.72rem; font-weight:600; color:inherit; opacity:.7; margin-bottom:.25rem; }
+  .pay-method-val   { font-size:1rem; font-weight:800; font-family:'DM Mono',monospace; }
+  .pm-cash  { background:#f0fdf4; color:#166534; }
+  .pm-mpesa { background:#fef9c3; color:#92400e; }
+  .pm-cred  { background:#fef2f2; color:#991b1b; }
 
-/* Month separator */
-.hist-month-label {
-  font-size:.7rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
-  color:#6b7280; padding:.5rem 0 .5rem; margin-top:1.5rem; margin-bottom:.5rem;
-  border-bottom:1px solid #e5e7eb;
-}
-.hist-month-label:first-child { margin-top:0; }
+  /* low stock */
+  .low-stock-bar { background:#fff; border:1px solid #fecaca; border-left:4px solid #ef4444; border-radius:14px; padding:1rem 1.25rem; margin-bottom:1rem; }
+  .low-stock-title { font-size:.63rem; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:#ef4444; margin-bottom:.65rem; }
+  .low-stock-chips { display:flex; flex-wrap:wrap; gap:.45rem; }
+  .low-stock-chip { background:#fee2e2; color:#991b1b; border-radius:8px; font-size:.72rem; font-weight:600; padding:.28rem .7rem; }
 
-/* Search & filter bar */
-.hist-filter { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:.85rem 1.1rem; margin-bottom:1rem; display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; }
-.hist-filter input[type=text] { border:1px solid #e5e7eb; border-radius:8px; padding:.4rem .75rem; font-size:.85rem; flex:1; min-width:160px; }
-.hist-filter input[type=month] { border:1px solid #e5e7eb; border-radius:8px; padding:.4rem .75rem; font-size:.85rem; }
-.hist-filter select { border:1px solid #e5e7eb; border-radius:8px; padding:.4rem .75rem; font-size:.85rem; }
+  /* daily table */
+  .sf-card { background:#fff; border:1px solid #e8edf2; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04); overflow:hidden; }
+  .sf-card-head { padding:.9rem 1.25rem; border-bottom:1px solid #f0f4f8; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; }
+  .sf-card-title { font-size:.82rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#7d97ac; }
 
-/* Print for day history */
-@media print {
-  body * { visibility:hidden; }
-  #printArea, #printArea * { visibility:visible; }
-  .hist-print-area, .hist-print-area * { visibility:visible !important; }
-  .hist-print-area { position:absolute; top:0; left:0; width:100%; }
-  #printArea { position:absolute; top:0; left:0; width:100%; }
-  .no-print { display:none !important; }
-  .hist-section .hist-body { display:block !important; }
-  table { font-size:11px; }
-}
+  /* top bar */
+  .sales-topbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1.75rem; }
+  .date-form { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+  .date-input { border:1.5px solid #e2e8f0; border-radius:9px; font-family:'DM Sans',sans-serif; font-size:.855rem; padding:.5rem .85rem; background:#fff; outline:none; transition:border-color .2s; }
+  .date-input:focus { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
 
-/* Daily report print */
-@media print {
-  body * { visibility:hidden; }
-  #printArea, #printArea * { visibility:visible; }
-  #printArea { position:absolute; top:0; left:0; width:100%; }
-  .no-print { display:none !important; }
-  table { font-size:11px; }
-  .badge { border:1px solid #ccc; }
-}
+  .btn-today { font-size:.8rem; padding:.5rem .9rem; border-radius:8px; }
+  .btn-export { display:inline-flex; align-items:center; gap:.4rem; font-size:.8rem; font-weight:600; padding:.5rem .9rem; border-radius:8px; border:1.5px solid #bbf7d0; background:#f0fdf4; color:#166534; text-decoration:none; transition:all .15s; }
+  .btn-export:hover { background:#10b981; color:#fff; border-color:#10b981; }
+
+  /* ── History ── */
+  .hist-section { background:#fff; border:1px solid #e8edf2; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.04); overflow:hidden; margin-bottom:.75rem; }
+  .hist-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:.9rem 1.25rem; cursor:pointer; user-select:none;
+    background:#f8fafc; transition:background .12s;
+  }
+  .hist-header:hover { background:#f0f4f8; }
+  .hist-header.open { background:#fff; border-bottom:1px solid #f0f4f8; }
+  .hist-left { display:flex; align-items:center; gap:.85rem; flex-wrap:wrap; }
+  .hist-date { font-size:.9rem; font-weight:700; color:#0d1b2a; }
+  .hist-sub  { font-size:.72rem; color:#7d97ac; margin-top:.1rem; }
+  .hist-pills { display:flex; gap:.4rem; flex-wrap:wrap; }
+  .hp { font-size:.68rem; font-weight:700; padding:.2rem .6rem; border-radius:999px; white-space:nowrap; }
+  .hp-cnt  { background:#eff6ff; color:#1e40af; }
+  .hp-rev  { background:#f0fdf4; color:#166534; }
+  .hp-prof { background:#f5f3ff; color:#7c3aed; }
+  .hp-cash { background:#dcfce7; color:#166534; }
+  .hp-mpesa{ background:#fef9c3; color:#92400e; }
+  .hp-cred { background:#fee2e2; color:#991b1b; }
+  .hist-chevron { font-size:.75rem; color:#b3c5cf; transition:transform .2s; flex-shrink:0; }
+  .hist-chevron.open { transform:rotate(180deg); }
+  .hist-body { display:none; }
+  .hist-body.open { display:block; }
+
+  .hist-table { width:100%; border-collapse:collapse; font-size:.845rem; }
+  .hist-table thead th { padding:.55rem 1rem; font-size:.65rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#7d97ac; border-bottom:1px solid #e8edf2; text-align:left; background:#f8fafc; }
+  .hist-table tbody tr:hover { background:#f9fafb; }
+  .hist-table tbody td { padding:.7rem 1rem; border-bottom:1px solid #f3f7f9; vertical-align:top; }
+  .hist-table tbody tr:last-child td { border-bottom:none; }
+  .hist-table tfoot td { padding:.65rem 1rem; background:#f8fafc; font-weight:700; border-top:2px solid #e8edf2; font-family:'DM Mono',monospace; font-size:.82rem; }
+  .hist-items { margin:0; padding-left:1rem; }
+  .hist-items li { font-size:.78rem; color:#374151; line-height:1.65; }
+
+  /* month divider */
+  .month-divider { font-size:.63rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#7d97ac; padding:.5rem .25rem .5rem; margin:1rem 0 .6rem; border-bottom:1px solid #e8edf2; }
+  .month-divider:first-child { margin-top:0; }
+
+  /* filter bar */
+  .hist-filter { background:#fff; border:1px solid #e8edf2; border-radius:12px; padding:.85rem 1.1rem; margin-bottom:1rem; display:flex; flex-wrap:wrap; gap:.65rem; align-items:center; }
+  .hf-input { border:1.5px solid #e2e8f0; border-radius:9px; padding:.48rem .85rem; font-family:'DM Sans',sans-serif; font-size:.83rem; outline:none; transition:border-color .2s; background:#fafbfc; }
+  .hf-input:focus { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
+  .hf-input { flex:1; min-width:160px; }
+
+  .hist-ctrl-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; margin-bottom:.85rem; }
+  .hist-title { font-size:1.1rem; font-weight:700; letter-spacing:-.02em; }
+
+  .btn-print { display:inline-flex; align-items:center; gap:.35rem; font-size:.75rem; font-weight:600; padding:.32rem .75rem; border-radius:7px; border:1.5px solid #e2e8f0; background:#f8fafc; color:#7d97ac; cursor:pointer; transition:all .15s; }
+  .btn-print:hover { border-color:#0d1b2a; background:#0d1b2a; color:#fff; }
+
+  .biz-group-label { font-size:.78rem; font-weight:700; color:#2563eb; border-bottom:2px solid #eff6ff; padding:.5rem .1rem; margin-bottom:.75rem; display:flex; align-items:center; gap:.4rem; }
+
+  /* empty */
+  .hist-empty { text-align:center; padding:3rem 1rem; color:#7d97ac; font-size:.855rem; }
+  .hist-empty i { font-size:2rem; opacity:.2; display:block; margin-bottom:.6rem; }
+
+  @media (max-width:767px) {
+    .stat-grid { grid-template-columns:repeat(2,1fr); gap:.65rem; }
+    .pay-methods { grid-template-columns:repeat(3,1fr); }
+    .stat-val { font-size:1.2rem; }
+  }
+  @media (max-width:480px) {
+    .pay-methods { grid-template-columns:1fr; }
+  }
+
+  @media print {
+    body * { visibility:hidden; }
+    #printArea, #printArea * { visibility:visible; }
+    #printArea { position:absolute; top:0; left:0; width:100%; }
+    .no-print { display:none !important; }
+    .hist-section .hist-body { display:block !important; }
+  }
 </style>
 
-<div class="container-fluid mt-4 px-3">
+<div class="sales-topbar no-print">
+  <h1 style="font-size:1.5rem;font-weight:700;letter-spacing:-.025em;margin:0;">Sales</h1>
+  <div style="display:flex;flex-wrap:wrap;gap:.65rem;align-items:center;">
+    <form method="GET" action="{{ url_for('sales.index') }}" class="date-form">
+      <label style="font-size:.78rem;font-weight:600;color:#7d97ac;">Date</label>
+      <input type="date" name="date" value="{{ selected_date }}" class="date-input"
+             onchange="this.form.submit()">
+      <a href="{{ url_for('sales.index') }}" class="btn btn-outline-secondary btn-today">Today</a>
+    </form>
+    <a href="{{ url_for('sales.export') }}" class="btn-export">
+      <i class="fas fa-file-excel" style="font-size:.78rem;"></i> Export
+    </a>
+  </div>
+</div>
 
-  <!-- Header + date picker + export -->
-  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 no-print">
-    <h1 class="mb-0">Sales</h1>
-    <div class="d-flex flex-wrap gap-2 align-items-center">
-      <form method="GET" action="{{ url_for('sales.index') }}" class="d-flex align-items-center gap-2">
-        <label class="fw-semibold small mb-0">📅 Date:</label>
-        <input type="date" name="date" value="{{ selected_date }}"
-               class="form-control form-control-sm" style="max-width:170px;"
-               onchange="this.form.submit()">
-        <a href="{{ url_for('sales.index') }}" class="btn btn-sm btn-outline-secondary">Today</a>
-      </form>
-      <a href="{{ url_for('sales.export') }}" class="btn btn-sm btn-outline-success">
-        <i class="fas fa-file-excel me-1"></i>Export Excel
-      </a>
+<div id="printArea">
+  <!-- Print header -->
+  <div class="d-none d-print-block text-center mb-3">
+    <h2 style="font-size:1.2rem;font-weight:800;margin:0;">{{ session.get('business_name','StockFlow') }}</h2>
+    <div style="font-size:.875rem;">Daily Sales Report — {{ selected_date_display }}</div>
+    <div style="font-size:.75rem;color:#7d97ac;">Printed {{ printed_at }}</div>
+    <hr>
+  </div>
+
+  {% if not is_super_admin %}
+
+  <!-- Summary cards -->
+  <div class="stat-grid">
+    <div class="stat-card stat-blue">
+      <div class="stat-label">Transactions</div>
+      <div class="stat-val">{{ day_sales|length }}</div>
+      <div class="stat-sub">today</div>
+    </div>
+    <div class="stat-card stat-green">
+      <div class="stat-label">Revenue</div>
+      <div class="stat-val" style="font-size:1.2rem;font-family:'DM Mono',monospace;">{{ "%.2f"|format(total_revenue) }}</div>
+      <div class="stat-sub">KSh</div>
+    </div>
+    <div class="stat-card stat-purple">
+      <div class="stat-label">Profit</div>
+      <div class="stat-val" style="font-size:1.2rem;font-family:'DM Mono',monospace;">{{ "%.2f"|format(total_profit) }}</div>
+      <div class="stat-sub">KSh</div>
+    </div>
+    <div class="stat-card {% if low_stock|length > 0 %}stat-red{% else %}stat-ok{% endif %}">
+      <div class="stat-label">Low Stock</div>
+      <div class="stat-val">{{ low_stock|length }}</div>
+      <div class="stat-sub">product{{ 's' if low_stock|length != 1 }}</div>
     </div>
   </div>
 
-  <!-- ══════════════ DAILY REPORT ══════════════ -->
-  <div id="printArea">
-    <div class="d-none d-print-block text-center mb-3">
-      <h2 style="font-size:1.3rem;font-weight:800;">{{ session.get('business_name','StockFlow') }}</h2>
-      <div style="font-size:.9rem;">Daily Sales Report — {{ selected_date_display }}</div>
-      <div style="font-size:.75rem;color:#6b7280;">Printed {{ printed_at }}</div>
-      <hr>
-    </div>
-
-    {% if not is_super_admin %}
-
-    <!-- Summary cards -->
-    <div class="row g-3 mb-4">
-      <div class="col-6 col-md-3">
-        <div class="report-card text-center">
-          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;">Sales Count</div>
-          <div style="font-size:1.8rem;font-weight:800;color:#2563eb;">{{ day_sales|length }}</div>
-          <div style="font-size:.72rem;color:#9ca3af;">transactions</div>
-        </div>
+  <!-- Payment breakdown -->
+  <div class="pay-bar">
+    <div class="pay-bar-title">Payment Method Breakdown</div>
+    <div class="pay-methods">
+      <div class="pay-method pm-cash">
+        <div class="pay-method-label">💵 Cash</div>
+        <div class="pay-method-val">KSh {{ "%.2f"|format(breakdown.cash) }}</div>
       </div>
-      <div class="col-6 col-md-3">
-        <div class="report-card text-center">
-          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;">Revenue</div>
-          <div style="font-size:1.5rem;font-weight:800;color:#16a34a;">KSh {{ "%.2f"|format(total_revenue) }}</div>
-          <div style="font-size:.72rem;color:#9ca3af;">total collected</div>
-        </div>
+      <div class="pay-method pm-mpesa">
+        <div class="pay-method-label">📱 M-Pesa</div>
+        <div class="pay-method-val">KSh {{ "%.2f"|format(breakdown.mpesa) }}</div>
       </div>
-      <div class="col-6 col-md-3">
-        <div class="report-card text-center">
-          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;">Profit</div>
-          <div style="font-size:1.5rem;font-weight:800;color:#7c3aed;">KSh {{ "%.2f"|format(total_profit) }}</div>
-          <div style="font-size:.72rem;color:#9ca3af;">after cost</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="report-card text-center">
-          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;">Low Stock</div>
-          <div style="font-size:1.8rem;font-weight:800;color:{% if low_stock|length > 0 %}#dc2626{% else %}#16a34a{% endif %};">
-            {{ low_stock|length }}
-          </div>
-          <div style="font-size:.72rem;color:#9ca3af;">product{{ 's' if low_stock|length != 1 }}</div>
-        </div>
+      <div class="pay-method pm-cred">
+        <div class="pay-method-label">📒 Credit</div>
+        <div class="pay-method-val">KSh {{ "%.2f"|format(breakdown.credit) }}</div>
       </div>
     </div>
+  </div>
 
-    <!-- Payment breakdown -->
-    <div class="report-card mb-4">
-      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:.75rem;">
-        Payment Method Breakdown
-      </div>
-      <div class="row g-3">
-        <div class="col-4 text-center">
-          <div class="stat-pill" style="background:#dcfce7;color:#166534;">
-            💵 Cash<br><strong>KSh {{ "%.2f"|format(breakdown.cash) }}</strong>
-          </div>
-        </div>
-        <div class="col-4 text-center">
-          <div class="stat-pill" style="background:#fef9c3;color:#92400e;">
-            📱 M-Pesa<br><strong>KSh {{ "%.2f"|format(breakdown.mpesa) }}</strong>
-          </div>
-        </div>
-        <div class="col-4 text-center">
-          <div class="stat-pill" style="background:#fee2e2;color:#991b1b;">
-            📒 Credit<br><strong>KSh {{ "%.2f"|format(breakdown.credit) }}</strong>
-          </div>
-        </div>
+  <!-- Low stock alerts -->
+  {% if low_stock %}
+  <div class="low-stock-bar">
+    <div class="low-stock-title">⚠ Low Stock Alerts</div>
+    <div class="low-stock-chips">
+      {% for p in low_stock %}
+      <span class="low-stock-chip">{{ p.name }} — {{ p.current_quantity }} left</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Daily sales table -->
+  <div class="sf-card mb-4">
+    <div class="sf-card-head">
+      <span class="sf-card-title">Sales on {{ selected_date_display }}</span>
+      <div class="d-flex gap-2 no-print">
+        <button onclick="window.print()" class="btn-print"><i class="fas fa-print"></i> Print</button>
+        <button onclick="downloadPDF()" class="btn btn-primary btn-sm d-flex align-items-center gap-1" style="font-size:.78rem;">
+          <i class="fas fa-file-pdf" style="font-size:.72rem;"></i> PDF
+        </button>
       </div>
     </div>
-
-    <!-- Low stock alerts -->
-    {% if low_stock %}
-    <div class="report-card mb-4" style="border-left:4px solid #dc2626;">
-      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#dc2626;margin-bottom:.75rem;">
-        ⚠️ Low Stock Alerts
-      </div>
-      <div class="d-flex flex-wrap gap-2">
-        {% for product in low_stock %}
-        <span class="badge bg-danger low-stock-badge">{{ product.name }} — {{ product.current_quantity }} left</span>
-        {% endfor %}
-      </div>
+    {% if day_sales %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size:.845rem;">
+        <thead>
+          <tr><th>Time</th><th>Cashier</th><th>Items</th><th>Revenue</th><th>Profit</th><th>Payment</th></tr>
+        </thead>
+        <tbody>
+          {% for sale in day_sales %}
+          {% set sp = namespace(val=0) %}
+          {% for item in sale['items'] %}{% set sp.val = sp.val + item.line_profit %}{% endfor %}
+          <tr>
+            <td style="font-weight:700;white-space:nowrap;font-family:'DM Mono',monospace;">{{ sale.date.strftime('%H:%M') if sale.date else '—' }}</td>
+            <td style="color:#7d97ac;">{{ sale.cashier_name or '—' }}</td>
+            <td>
+              <ul class="hist-items">
+                {% for item in sale['items'] %}
+                <li>{{ item.quantity }} × <strong>{{ item.product_name }}</strong> @ KSh {{ "%.2f"|format(item.selling_price) }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+            <td style="font-family:'DM Mono',monospace;font-weight:700;color:#10b981;">KSh {{ "%.2f"|format(sale.total_amount) }}</td>
+            <td style="font-family:'DM Mono',monospace;font-weight:600;color:#7c3aed;">KSh {{ "%.2f"|format(sp.val) }}</td>
+            <td>
+              {% set pm = sale.payment_method|lower %}
+              <span class="badge {{ 'bg-success' if pm=='cash' else 'bg-warning text-dark' if pm=='credit' else 'bg-info' }}">{{ sale.payment_method|capitalize }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="text-align:right;color:#7d97ac;font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">Totals</td>
+            <td style="color:#10b981;">KSh {{ "%.2f"|format(total_revenue) }}</td>
+            <td style="color:#7c3aed;">KSh {{ "%.2f"|format(total_profit) }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
-    {% endif %}
-
-    <!-- Daily sales table -->
-    <div class="report-card mb-4">
-      <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;">
-          Sales on {{ selected_date_display }}
-        </div>
-        <div class="d-flex gap-2">
-          <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-print me-1"></i>Print
-          </button>
-          <button onclick="downloadPDF()" class="btn btn-sm btn-primary">
-            <i class="fas fa-file-pdf me-1"></i>Download PDF
-          </button>
-        </div>
-      </div>
-      <div class="d-none d-print-block mb-2" style="font-weight:700;font-size:.85rem;">
-        Sales on {{ selected_date_display }}
-      </div>
-      {% if day_sales %}
-      <div class="table-responsive">
-        <table class="table table-hover align-middle" style="font-size:.85rem;">
-          <thead class="table-dark">
-            <tr><th>Time</th><th>Cashier</th><th>Items</th><th>Revenue</th><th>Profit</th><th>Payment</th></tr>
-          </thead>
-          <tbody>
-            {% for sale in day_sales %}
-            {% set sale_profit = namespace(val=0) %}
-            {% for item in sale['items'] %}{% set sale_profit.val = sale_profit.val + item.line_profit %}{% endfor %}
-            <tr>
-              <td style="white-space:nowrap;">{{ sale.date.strftime('%H:%M') if sale.date else '—' }}</td>
-              <td>{{ sale.cashier_name or '—' }}</td>
-              <td>
-                <ul class="mb-0 ps-3 small">
-                  {% for item in sale['items'] %}
-                  <li>{{ item.quantity }} × {{ item.product_name }} @ KSh {{ "%.2f"|format(item.selling_price) }}</li>
-                  {% endfor %}
-                </ul>
-              </td>
-              <td><strong>KSh {{ "%.2f"|format(sale.total_amount) }}</strong></td>
-              <td style="color:#7c3aed;font-weight:600;">KSh {{ "%.2f"|format(sale_profit.val) }}</td>
-              <td>
-                <span class="badge bg-{{ 'success' if sale.payment_method == 'cash' else 'warning text-dark' if sale.payment_method == 'credit' else 'info' }}">
-                  {{ sale.payment_method|capitalize }}
-                </span>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-          <tfoot class="table-light">
-            <tr>
-              <td colspan="3" class="text-end fw-bold">Totals</td>
-              <td><strong class="text-success">KSh {{ "%.2f"|format(total_revenue) }}</strong></td>
-              <td><strong style="color:#7c3aed;">KSh {{ "%.2f"|format(total_profit) }}</strong></td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      {% else %}
-      <div class="text-center text-muted py-4">
-        <i class="fas fa-receipt me-2"></i>No sales recorded on {{ selected_date_display }}
-      </div>
-      {% endif %}
+    {% else %}
+    <div class="hist-empty">
+      <i class="fas fa-receipt"></i>
+      No sales recorded on {{ selected_date_display }}
     </div>
-
     {% endif %}
   </div>
 
-  <!-- ══════════════ TRANSACTION HISTORY ══════════════ -->
-  <div class="no-print" id="historySection">
+  {% endif %}
+</div>
 
-    <div class="d-flex align-items-center justify-content-between mb-3 mt-2 flex-wrap gap-2">
-      <h4 class="mb-0"><i class="fas fa-history me-2" style="color:#2563eb"></i>Transaction History</h4>
-      <div class="d-flex gap-2 flex-wrap">
-        <button class="btn btn-sm btn-outline-secondary" onclick="expandAll()">
-          <i class="fas fa-expand-alt me-1"></i>Expand All
-        </button>
-        <button class="btn btn-sm btn-outline-secondary" onclick="collapseAll()">
-          <i class="fas fa-compress-alt me-1"></i>Collapse All
-        </button>
-      </div>
+<!-- ── Transaction History ── -->
+<div class="no-print" id="historySection">
+  <div class="hist-ctrl-row">
+    <div class="hist-title"><i class="fas fa-history me-2" style="color:#2563eb;font-size:.9rem;"></i>Transaction History</div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+      <button class="btn btn-sm btn-outline-secondary" style="font-size:.78rem;" onclick="expandAll()"><i class="fas fa-expand-alt me-1"></i>Expand All</button>
+      <button class="btn btn-sm btn-outline-secondary" style="font-size:.78rem;" onclick="collapseAll()"><i class="fas fa-compress-alt me-1"></i>Collapse All</button>
     </div>
+  </div>
 
-    <!-- Filter bar -->
-    <div class="hist-filter no-print">
-      <input type="text" id="histSearch" placeholder="🔍 Search cashier or product..." oninput="filterHistory()">
-      <input type="month" id="histMonth" onchange="filterHistory()" title="Filter by month">
-      <select id="histPayment" onchange="filterHistory()">
-        <option value="">All Payments</option>
-        <option value="cash">Cash</option>
-        <option value="mpesa">M-Pesa</option>
-        <option value="credit">Credit</option>
-      </select>
-      <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
-        <i class="fas fa-times me-1"></i>Clear
-      </button>
-    </div>
+  <div class="hist-filter">
+    <input type="text" id="histSearch" class="hf-input" placeholder="🔍 Search cashier or product…" oninput="filterHistory()">
+    <input type="month" id="histMonth" class="hf-input" style="flex:0 0 auto;min-width:auto;" onchange="filterHistory()">
+    <select id="histPayment" class="hf-input" style="flex:0 0 auto;min-width:130px;" onchange="filterHistory()">
+      <option value="">All Payments</option>
+      <option value="cash">Cash</option>
+      <option value="mpesa">M-Pesa</option>
+      <option value="credit">Credit</option>
+    </select>
+    <button class="btn btn-sm btn-outline-secondary" style="font-size:.78rem;" onclick="clearFilters()">
+      <i class="fas fa-times me-1"></i>Clear
+    </button>
+  </div>
 
-    {% if is_super_admin %}
-    {# ── Super admin: grouped by business then by day ── #}
+  {% if is_super_admin %}
     {% if history_by_day %}
       {% for biz_name, biz_days in history_by_day.items() %}
       <div class="mb-4">
-        <div style="font-size:.8rem;font-weight:700;padding:.5rem .25rem;color:#2563eb;border-bottom:2px solid #eff6ff;margin-bottom:.75rem;">
-          <i class="fas fa-building me-1"></i>{{ biz_name }}
-        </div>
+        <div class="biz-group-label"><i class="fas fa-building" style="font-size:.75rem;"></i>{{ biz_name }}</div>
         {% set current_month = namespace(val='') %}
         {% for day_key, day_data in biz_days.items() %}
           {% if day_data.month_label != current_month.val %}
             {% set current_month.val = day_data.month_label %}
-            <div class="hist-month-label">{{ day_data.month_label }}</div>
+            <div class="month-divider">{{ day_data.month_label }}</div>
           {% endif %}
-
           <div class="hist-section hist-day-block"
                data-month="{{ day_data.month_key }}"
                data-payments="{{ day_data.payments|join(',') }}"
                data-text="{{ day_data.search_text|lower }}">
-            <div class="hist-day-header" onclick="toggleDay(this)">
-              <div class="hist-day-left">
+            <div class="hist-header" onclick="toggleDay(this)">
+              <div class="hist-left">
                 <div>
-                  <div class="hist-day-date">{{ day_data.display }}</div>
-                  <div class="hist-day-sub">{{ day_data.count }} transaction{{ 's' if day_data.count != 1 }}</div>
+                  <div class="hist-date">{{ day_data.display }}</div>
+                  <div class="hist-sub">{{ day_data.count }} transaction{{ 's' if day_data.count != 1 }}</div>
                 </div>
-                <div class="hist-day-pills">
-                  <span class="hist-pill hp-cnt"><i class="fas fa-receipt me-1"></i>{{ day_data.count }}</span>
-                  <span class="hist-pill hp-rev">KSh {{ "%.2f"|format(day_data.revenue) }}</span>
-                  <span class="hist-pill hp-prof">Profit KSh {{ "%.2f"|format(day_data.profit) }}</span>
-                  {% if day_data.breakdown.cash > 0 %}<span class="hist-pill hp-cash">💵 {{ "%.0f"|format(day_data.breakdown.cash) }}</span>{% endif %}
-                  {% if day_data.breakdown.mpesa > 0 %}<span class="hist-pill hp-mpesa">📱 {{ "%.0f"|format(day_data.breakdown.mpesa) }}</span>{% endif %}
-                  {% if day_data.breakdown.credit > 0 %}<span class="hist-pill hp-cred">📒 {{ "%.0f"|format(day_data.breakdown.credit) }}</span>{% endif %}
+                <div class="hist-pills">
+                  <span class="hp hp-cnt">{{ day_data.count }}</span>
+                  <span class="hp hp-rev">KSh {{ "%.0f"|format(day_data.revenue) }}</span>
+                  <span class="hp hp-prof">P: {{ "%.0f"|format(day_data.profit) }}</span>
+                  {% if day_data.breakdown.cash > 0 %}<span class="hp hp-cash">💵 {{ "%.0f"|format(day_data.breakdown.cash) }}</span>{% endif %}
+                  {% if day_data.breakdown.mpesa > 0 %}<span class="hp hp-mpesa">📱 {{ "%.0f"|format(day_data.breakdown.mpesa) }}</span>{% endif %}
+                  {% if day_data.breakdown.credit > 0 %}<span class="hp hp-cred">📒 {{ "%.0f"|format(day_data.breakdown.credit) }}</span>{% endif %}
                 </div>
               </div>
-              <div style="display:flex;align-items:center;gap:.75rem;">
-                <button class="btn btn-sm btn-outline-secondary no-print"
-                  onclick="event.stopPropagation(); printDay('{{ day_key }}-{{ loop.index }}', '{{ day_data.display }}')"
-                  title="Print this day"><i class="fas fa-print"></i></button>
+              <div style="display:flex;align-items:center;gap:.65rem;">
+                <button class="btn-print no-print"
+                        onclick="event.stopPropagation();printDay('{{ day_key }}-{{ loop.index }}','{{ day_data.display }}')">
+                  <i class="fas fa-print"></i>
+                </button>
                 <i class="fas fa-chevron-down hist-chevron"></i>
               </div>
             </div>
             <div class="hist-body" id="body-{{ day_key }}-{{ loop.index }}">
               <div class="table-responsive">
                 <table class="hist-table" id="table-{{ day_key }}-{{ loop.index }}">
-                  <thead><tr><th>Time</th><th>Cashier</th><th>Items Sold</th><th>Revenue</th><th>Profit</th><th>Payment</th></tr></thead>
+                  <thead><tr><th>Time</th><th>Cashier</th><th>Items</th><th>Revenue</th><th>Profit</th><th>Payment</th></tr></thead>
                   <tbody>
                     {% for sale in day_data.sales %}
                     {% set sp = namespace(val=0) %}
                     {% for item in sale['items'] %}{% set sp.val = sp.val + item.line_profit %}{% endfor %}
                     <tr>
-                      <td style="white-space:nowrap;font-weight:600;">{{ sale.date.strftime('%H:%M') if sale.date else '—' }}</td>
-                      <td>{{ sale.cashier_name or '—' }}</td>
+                      <td style="font-weight:700;white-space:nowrap;font-family:'DM Mono',monospace;">{{ sale.date.strftime('%H:%M') if sale.date else '—' }}</td>
+                      <td style="color:#7d97ac;">{{ sale.cashier_name or '—' }}</td>
                       <td><ul class="hist-items">{% for item in sale['items'] %}<li>{{ item.quantity }} × <strong>{{ item.product_name }}</strong> @ KSh {{ "%.2f"|format(item.selling_price) }}</li>{% endfor %}</ul></td>
-                      <td style="font-weight:700;color:#059669;">KSh {{ "%.2f"|format(sale.total_amount) }}</td>
-                      <td style="font-weight:600;color:#7c3aed;">KSh {{ "%.2f"|format(sp.val) }}</td>
-                      <td><span class="badge bg-{{ 'success' if sale.payment_method=='cash' else 'warning text-dark' if sale.payment_method=='credit' else 'info' }}">{{ sale.payment_method|capitalize }}</span></td>
+                      <td style="font-family:'DM Mono',monospace;font-weight:700;color:#10b981;">KSh {{ "%.2f"|format(sale.total_amount) }}</td>
+                      <td style="font-family:'DM Mono',monospace;font-weight:600;color:#7c3aed;">KSh {{ "%.2f"|format(sp.val) }}</td>
+                      <td>{% set pm=sale.payment_method|lower %}<span class="badge {{ 'bg-success' if pm=='cash' else 'bg-warning text-dark' if pm=='credit' else 'bg-info' }}">{{ sale.payment_method|capitalize }}</span></td>
                     </tr>
                     {% endfor %}
                   </tbody>
                   <tfoot><tr>
-                    <td colspan="3" style="text-align:right;">Day Totals</td>
-                    <td style="color:#059669;">KSh {{ "%.2f"|format(day_data.revenue) }}</td>
+                    <td colspan="3" style="text-align:right;color:#7d97ac;">Day Totals</td>
+                    <td style="color:#10b981;">KSh {{ "%.2f"|format(day_data.revenue) }}</td>
                     <td style="color:#7c3aed;">KSh {{ "%.2f"|format(day_data.profit) }}</td>
                     <td></td>
                   </tr></tfoot>
@@ -352,234 +356,134 @@
       </div>
       {% endfor %}
     {% else %}
-      <div class="text-center text-muted py-5">
-        <i class="fas fa-receipt" style="font-size:2rem;opacity:.2;display:block;margin-bottom:.5rem"></i>
-        No sales found across any business.
-      </div>
+    <div class="hist-empty"><i class="fas fa-receipt"></i>No sales found across any business.</div>
     {% endif %}
 
-    {% else %}
-    {# ── Branch view: grouped by day ── #}
+  {% else %}
     {% set current_month = namespace(val='') %}
     {% if history_by_day %}
       {% for day_key, day_data in history_by_day.items() %}
         {% if day_data.month_label != current_month.val %}
           {% set current_month.val = day_data.month_label %}
-          <div class="hist-month-label">{{ day_data.month_label }}</div>
+          <div class="month-divider">{{ day_data.month_label }}</div>
         {% endif %}
-
         <div class="hist-section hist-day-block"
              data-month="{{ day_data.month_key }}"
              data-payments="{{ day_data.payments|join(',') }}"
              data-text="{{ day_data.search_text|lower }}">
-
-          <!-- Day header (clickable) -->
-          <div class="hist-day-header" onclick="toggleDay(this)">
-            <div class="hist-day-left">
+          <div class="hist-header" onclick="toggleDay(this)">
+            <div class="hist-left">
               <div>
-                <div class="hist-day-date">{{ day_data.display }}</div>
-                <div class="hist-day-sub">{{ day_data.count }} transaction{{ 's' if day_data.count != 1 }}</div>
+                <div class="hist-date">{{ day_data.display }}</div>
+                <div class="hist-sub">{{ day_data.count }} transaction{{ 's' if day_data.count != 1 }}</div>
               </div>
-              <div class="hist-day-pills">
-                <span class="hist-pill hp-cnt"><i class="fas fa-receipt me-1"></i>{{ day_data.count }}</span>
-                <span class="hist-pill hp-rev">KSh {{ "%.2f"|format(day_data.revenue) }}</span>
-                <span class="hist-pill hp-prof">Profit KSh {{ "%.2f"|format(day_data.profit) }}</span>
-                {% if day_data.breakdown.cash > 0 %}<span class="hist-pill hp-cash">💵 {{ "%.0f"|format(day_data.breakdown.cash) }}</span>{% endif %}
-                {% if day_data.breakdown.mpesa > 0 %}<span class="hist-pill hp-mpesa">📱 {{ "%.0f"|format(day_data.breakdown.mpesa) }}</span>{% endif %}
-                {% if day_data.breakdown.credit > 0 %}<span class="hist-pill hp-cred">📒 {{ "%.0f"|format(day_data.breakdown.credit) }}</span>{% endif %}
+              <div class="hist-pills">
+                <span class="hp hp-cnt">{{ day_data.count }}</span>
+                <span class="hp hp-rev">KSh {{ "%.0f"|format(day_data.revenue) }}</span>
+                <span class="hp hp-prof">P: {{ "%.0f"|format(day_data.profit) }}</span>
+                {% if day_data.breakdown.cash > 0 %}<span class="hp hp-cash">💵 {{ "%.0f"|format(day_data.breakdown.cash) }}</span>{% endif %}
+                {% if day_data.breakdown.mpesa > 0 %}<span class="hp hp-mpesa">📱 {{ "%.0f"|format(day_data.breakdown.mpesa) }}</span>{% endif %}
+                {% if day_data.breakdown.credit > 0 %}<span class="hp hp-cred">📒 {{ "%.0f"|format(day_data.breakdown.credit) }}</span>{% endif %}
               </div>
             </div>
-            <div style="display:flex;align-items:center;gap:.75rem;">
-              <button class="btn btn-sm btn-outline-secondary no-print"
-                onclick="event.stopPropagation(); printDay('{{ day_key }}', '{{ day_data.display }}')"
-                title="Print this day">
+            <div style="display:flex;align-items:center;gap:.65rem;">
+              <button class="btn-print no-print"
+                      onclick="event.stopPropagation();printDay('{{ day_key }}','{{ day_data.display }}')">
                 <i class="fas fa-print"></i>
               </button>
               <i class="fas fa-chevron-down hist-chevron"></i>
             </div>
           </div>
-
-          <!-- Day body (transactions table) -->
           <div class="hist-body" id="body-{{ day_key }}">
             <div class="table-responsive">
               <table class="hist-table" id="table-{{ day_key }}">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Cashier</th>
-                    <th>Items Sold</th>
-                    <th>Revenue</th>
-                    <th>Profit</th>
-                    <th>Payment</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Time</th><th>Cashier</th><th>Items Sold</th><th>Revenue</th><th>Profit</th><th>Payment</th></tr></thead>
                 <tbody>
                   {% for sale in day_data.sales %}
                   {% set sp = namespace(val=0) %}
                   {% for item in sale['items'] %}{% set sp.val = sp.val + item.line_profit %}{% endfor %}
                   <tr>
-                    <td style="white-space:nowrap;font-weight:600;">
-                      {{ sale.date.strftime('%H:%M') if sale.date else '—' }}
-                    </td>
-                    <td>{{ sale.cashier_name or '—' }}</td>
-                    <td>
-                      <ul class="hist-items">
-                        {% for item in sale['items'] %}
-                        <li>{{ item.quantity }} × <strong>{{ item.product_name }}</strong> @ KSh {{ "%.2f"|format(item.selling_price) }}</li>
-                        {% endfor %}
-                      </ul>
-                    </td>
-                    <td style="font-weight:700;color:#059669;">KSh {{ "%.2f"|format(sale.total_amount) }}</td>
-                    <td style="font-weight:600;color:#7c3aed;">KSh {{ "%.2f"|format(sp.val) }}</td>
-                    <td>
-                      {% set pm = sale.payment_method|lower %}
-                      <span class="badge bg-{{ 'success' if pm=='cash' else 'warning text-dark' if pm=='credit' else 'info' }}">
-                        {{ sale.payment_method|capitalize }}
-                      </span>
-                    </td>
+                    <td style="font-weight:700;white-space:nowrap;font-family:'DM Mono',monospace;">{{ sale.date.strftime('%H:%M') if sale.date else '—' }}</td>
+                    <td style="color:#7d97ac;">{{ sale.cashier_name or '—' }}</td>
+                    <td><ul class="hist-items">{% for item in sale['items'] %}<li>{{ item.quantity }} × <strong>{{ item.product_name }}</strong> @ KSh {{ "%.2f"|format(item.selling_price) }}</li>{% endfor %}</ul></td>
+                    <td style="font-family:'DM Mono',monospace;font-weight:700;color:#10b981;">KSh {{ "%.2f"|format(sale.total_amount) }}</td>
+                    <td style="font-family:'DM Mono',monospace;font-weight:600;color:#7c3aed;">KSh {{ "%.2f"|format(sp.val) }}</td>
+                    <td>{% set pm=sale.payment_method|lower %}<span class="badge {{ 'bg-success' if pm=='cash' else 'bg-warning text-dark' if pm=='credit' else 'bg-info' }}">{{ sale.payment_method|capitalize }}</span></td>
                   </tr>
                   {% endfor %}
                 </tbody>
-                <tfoot>
-                  <tr>
-                    <td colspan="3" style="text-align:right;">Day Totals</td>
-                    <td style="color:#059669;">KSh {{ "%.2f"|format(day_data.revenue) }}</td>
-                    <td style="color:#7c3aed;">KSh {{ "%.2f"|format(day_data.profit) }}</td>
-                    <td></td>
-                  </tr>
-                </tfoot>
+                <tfoot><tr>
+                  <td colspan="3" style="text-align:right;color:#7d97ac;">Day Totals</td>
+                  <td style="color:#10b981;">KSh {{ "%.2f"|format(day_data.revenue) }}</td>
+                  <td style="color:#7c3aed;">KSh {{ "%.2f"|format(day_data.profit) }}</td>
+                  <td></td>
+                </tr></tfoot>
               </table>
             </div>
           </div>
         </div>
-
       {% endfor %}
     {% else %}
-      <div class="text-center text-muted py-5">
-        <i class="fas fa-receipt" style="font-size:2rem;opacity:.2;display:block;margin-bottom:.5rem"></i>
-        No sales recorded yet.
-      </div>
+    <div class="hist-empty"><i class="fas fa-receipt"></i>No sales recorded yet.</div>
     {% endif %}
-    {% endif %}
-
-  </div>{# end history section #}
-
-  <!-- Hidden print container for day printing -->
-  <div id="dayPrintContainer" style="display:none;"></div>
-
+  {% endif %}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
-// ── Daily report PDF ──────────────────────────────────────────────────────────
 function downloadPDF() {
-  const element = document.getElementById('printArea');
+  const el = document.getElementById('printArea');
   const date = '{{ selected_date_display }}';
   const biz  = '{{ session.get("business_name","StockFlow") }}';
-  const opt  = {
-    margin:[10,10,10,10],
-    filename:'Daily_Report_{{ selected_date }}.pdf',
-    image:{type:'jpeg',quality:.98},
-    html2canvas:{scale:2,useCORS:true},
+  const hdr  = document.createElement('div');
+  hdr.id='pdfH';
+  hdr.innerHTML=`<div style="text-align:center;margin-bottom:16px;"><h2 style="font-size:17px;font-weight:800;margin:0;">${biz}</h2><div style="font-size:12px;">Daily Sales Report — ${date}</div><div style="font-size:11px;color:#7d97ac;">Printed {{ printed_at }}</div><hr style="margin:8px 0;"></div>`;
+  el.insertBefore(hdr,el.firstChild);
+  html2pdf().set({
+    margin:[10,10,10,10], filename:'Daily_Report_{{ selected_date }}.pdf',
+    image:{type:'jpeg',quality:.98}, html2canvas:{scale:2,useCORS:true},
     jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
-  };
-  const header = document.createElement('div');
-  header.id = 'pdfHeader';
-  header.style.cssText = 'text-align:center;margin-bottom:16px;';
-  header.innerHTML = `<h2 style="font-size:18px;font-weight:800;margin:0;">${biz}</h2>
-    <div style="font-size:13px;">Daily Sales Report — ${date}</div>
-    <div style="font-size:11px;color:#6b7280;">Printed {{ printed_at }}</div>
-    <hr style="margin:8px 0;">`;
-  element.insertBefore(header, element.firstChild);
-  html2pdf().set(opt).from(element).save().then(() => {
-    const h = document.getElementById('pdfHeader');
-    if (h) h.remove();
-  });
+  }).from(el).save().then(()=>{const h=document.getElementById('pdfH');if(h)h.remove();});
 }
 
-// ── History: toggle day ───────────────────────────────────────────────────────
 function toggleDay(header) {
-  const isOpen = header.classList.contains('open');
-  const section = header.closest('.hist-section');
-  const body    = section.querySelector('.hist-body');
+  const open = header.classList.contains('open');
+  const body    = header.closest('.hist-section').querySelector('.hist-body');
   const chevron = header.querySelector('.hist-chevron');
-  header.classList.toggle('open', !isOpen);
-  body.classList.toggle('open', !isOpen);
-  chevron.classList.toggle('open', !isOpen);
+  header.classList.toggle('open',!open);
+  body.classList.toggle('open',!open);
+  chevron.classList.toggle('open',!open);
 }
+function expandAll()  { document.querySelectorAll('.hist-header:not(.open)').forEach(toggleDay); }
+function collapseAll(){ document.querySelectorAll('.hist-header.open').forEach(toggleDay); }
 
-function expandAll() {
-  document.querySelectorAll('.hist-day-header').forEach(h => {
-    if (!h.classList.contains('open')) toggleDay(h);
-  });
-}
-
-function collapseAll() {
-  document.querySelectorAll('.hist-day-header').forEach(h => {
-    if (h.classList.contains('open')) toggleDay(h);
-  });
-}
-
-// ── Print a single day ────────────────────────────────────────────────────────
 function printDay(dayKey, dayDisplay) {
-  const biz = '{{ session.get("business_name","StockFlow") }}';
+  const biz   = '{{ session.get("business_name","StockFlow") }}';
   const table = document.getElementById('table-' + dayKey);
   if (!table) return;
-
-  const printWin = window.open('', '_blank', 'width=900,height=700');
-  printWin.document.write(`
-    <!DOCTYPE html><html><head>
-    <title>${biz} — ${dayDisplay}</title>
-    <style>
-      body{font-family:Arial,sans-serif;padding:20px;font-size:13px;}
-      h2{font-size:18px;font-weight:800;margin:0 0 4px;}
-      .sub{font-size:12px;color:#6b7280;margin-bottom:4px;}
-      hr{margin:8px 0 16px;}
-      table{width:100%;border-collapse:collapse;}
-      thead th{background:#1f2937;color:#fff;padding:7px 10px;font-size:11px;text-align:left;text-transform:uppercase;letter-spacing:.06em;}
-      tbody td{padding:7px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top;}
-      tbody tr:nth-child(even){background:#f9fafb;}
-      tfoot td{background:#f3f4f6;padding:7px 10px;font-weight:700;border-top:2px solid #e5e7eb;}
-      ul{margin:0;padding-left:1rem;}
-      li{font-size:11px;line-height:1.6;}
-      .rev{color:#059669;font-weight:700;}
-      .prof{color:#7c3aed;font-weight:600;}
-    </style></head><body>
-    <h2>${biz}</h2>
-    <div class="sub">Transaction History — ${dayDisplay}</div>
-    <div class="sub">Printed: ${new Date().toLocaleString('en-KE')}</div>
-    <hr>
-    ${table.outerHTML}
-    </body></html>
-  `);
-  printWin.document.close();
-  printWin.focus();
-  setTimeout(() => { printWin.print(); printWin.close(); }, 400);
+  const w = window.open('','_blank','width=900,height=700');
+  w.document.write(`<!DOCTYPE html><html><head><title>${biz} — ${dayDisplay}</title>
+  <style>body{font-family:Arial,sans-serif;padding:20px;font-size:13px;}h2{font-size:17px;font-weight:800;margin:0 0 4px;}.sub{font-size:12px;color:#7d97ac;margin-bottom:4px;}hr{margin:8px 0 16px;}table{width:100%;border-collapse:collapse;}thead th{background:#0d1b2a;color:#fff;padding:7px 10px;font-size:11px;text-align:left;text-transform:uppercase;letter-spacing:.05em;}tbody td{padding:7px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top;}tbody tr:nth-child(even){background:#f9fafb;}tfoot td{background:#f3f4f6;padding:7px 10px;font-weight:700;border-top:2px solid #e5e7eb;}ul{margin:0;padding-left:1rem;}li{font-size:11px;line-height:1.6;}</style>
+  </head><body><h2>${biz}</h2><div class="sub">Transaction History — ${dayDisplay}</div><div class="sub">Printed: ${new Date().toLocaleString('en-KE')}</div><hr>${table.outerHTML}</body></html>`);
+  w.document.close(); w.focus();
+  setTimeout(()=>{ w.print(); w.close(); }, 400);
 }
 
-// ── Filter history ────────────────────────────────────────────────────────────
 function filterHistory() {
   const search  = document.getElementById('histSearch').value.toLowerCase().trim();
-  const month   = document.getElementById('histMonth').value;   // "YYYY-MM"
+  const month   = document.getElementById('histMonth').value;
   const payment = document.getElementById('histPayment').value.toLowerCase();
-
-  document.querySelectorAll('.hist-day-block').forEach(block => {
-    const blockMonth   = block.dataset.month   || '';
-    const blockPayment = block.dataset.payments || '';
-    const blockText    = block.dataset.text     || '';
-
-    const monthMatch   = !month   || blockMonth === month;
-    const paymentMatch = !payment || blockPayment.includes(payment);
-    const searchMatch  = !search  || blockText.includes(search);
-
-    block.style.display = (monthMatch && paymentMatch && searchMatch) ? '' : 'none';
+  document.querySelectorAll('.hist-day-block').forEach(b => {
+    const ok = (!month   || b.dataset.month   === month)  &&
+               (!payment || b.dataset.payments.includes(payment)) &&
+               (!search  || b.dataset.text.includes(search));
+    b.style.display = ok ? '' : 'none';
   });
 }
-
 function clearFilters() {
-  document.getElementById('histSearch').value  = '';
-  document.getElementById('histMonth').value   = '';
-  document.getElementById('histPayment').value = '';
+  document.getElementById('histSearch').value='';
+  document.getElementById('histMonth').value='';
+  document.getElementById('histPayment').value='';
   filterHistory();
 }
 </script>

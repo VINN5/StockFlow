@@ -1,138 +1,219 @@
 {% extends "base.html" %}
-
 {% block title %}Users - StockFlow{% endblock %}
-
 {% block content %}
-<div class="container-fluid mt-4 px-3">
-    <h1 class="mb-4">User Management</h1>
+<style>
+  .sf-page-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.75rem; }
+  .sf-page-title  { font-size:1.5rem; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .sf-page-sub    { font-size:.82rem; color:#7d97ac; margin-top:.2rem; }
+  .sf-card        { background:#fff; border:1px solid #e8edf2; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04); overflow:hidden; }
 
-    <button class="btn btn-primary mb-4" data-bs-toggle="modal" data-bs-target="#addUserModal">
-        <i class="fas fa-user-plus me-2"></i>Add New User
-    </button>
+  /* role badges */
+  .role-super { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+  .role-admin { background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
+  .role-cashier { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
 
-    <div class="table-responsive">
-        <table class="table table-hover align-middle table-card-mobile">
-            <thead class="table-dark">
-                <tr>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th>Business</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                <tr>
-                    <td data-label="Username">
-                        <strong>{{ user.username }}</strong>
-                        {% if user._id|string == session.user_id %}
-                        <span class="badge bg-success ms-2">You</span>
-                        {% endif %}
-                    </td>
-                    <td data-label="Role">
-                        <span class="badge bg-{{ 'danger' if user.role == 'super_admin' else 'primary' if user.role == 'admin' else 'secondary' }}">
-                            {{ user.role|capitalize }}
-                        </span>
-                    </td>
-                    <td data-label="Business">{{ user.business_name or '—' }}</td>
-                    <td data-label="Created">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'Unknown' }}</td>
-                    <td data-label="Actions">
-                        {% if user._id|string != session.user_id %}
-                        {% if session.role in ['admin', 'super_admin'] %}
-                        <a href="{{ url_for('delete_user', user_id=user._id) }}"
-                           class="btn btn-sm btn-danger me-1"
-                           onclick="return confirm('Are you sure you want to delete {{ user.username }}?')">
-                            <i class="fas fa-trash"></i>
-                        </a>
-                        {% endif %}
-                        {% if session.role == 'super_admin' %}
-                        <button class="btn btn-sm btn-warning"
-                                data-bs-toggle="modal"
-                                data-bs-target="#resetModal{{ user._id }}">
-                            <i class="fas fa-key"></i>
-                        </button>
-                        {% endif %}
-                        {% endif %}
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" class="text-center py-4 text-muted">No users found</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+  /* you badge */
+  .you-badge {
+    display:inline-flex; align-items:center; gap:.25rem;
+    background:rgba(245,158,11,.1); color:#92400e;
+    border:1px solid rgba(245,158,11,.25);
+    border-radius:999px; padding:.15rem .55rem;
+    font-size:.65rem; font-weight:700; letter-spacing:.04em;
+    vertical-align:middle; margin-left:.4rem;
+  }
 
-    <!-- Add User Modal -->
-    <div class="modal fade" id="addUserModal" tabindex="-1">
-        <div class="modal-dialog modal-fullscreen-sm-down">
-            <div class="modal-content">
-                <form method="POST" action="{{ url_for('add_user') }}">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add New User</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Username</label>
-                            <input type="text" name="username" class="form-control" required autocomplete="off">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Password</label>
-                            <input type="password" name="password" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Role</label>
-                            <select name="role" class="form-select">
-                                <option value="cashier">Cashier</option>
-                                {% if session.role in ['admin', 'super_admin'] %}
-                                <option value="admin">Branch Admin</option>
-                                {% endif %}
-                            </select>
-                            <small class="form-text text-muted">
-                                {% if session.role == 'super_admin' %}Super admins can create branch admins.
-                                {% else %}You can create cashiers or branch admins.{% endif %}
-                            </small>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Add User</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+  /* modal */
+  .sf-modal .modal-content { border-radius:16px; border:none; box-shadow:0 24px 64px rgba(0,0,0,.15); overflow:hidden; }
+  .sf-modal .modal-header  { padding:1.1rem 1.4rem; }
+  .sf-modal .modal-body    { padding:1.4rem; }
+  .sf-modal .modal-footer  { padding:.9rem 1.4rem; background:#f8fafc; }
 
-    <!-- Reset Password Modals -->
-    {% for user in users %}
-    {% if session.role == 'super_admin' and user._id|string != session.user_id %}
-    <div class="modal fade" id="resetModal{{ user._id }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form method="POST" action="{{ url_for('reset_user_password', user_id=user._id) }}">
-                    <div class="modal-header bg-warning text-dark">
-                        <h5 class="modal-title"><i class="fas fa-key me-2"></i>Reset Password — {{ user.username }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">New Password</label>
-                            <input type="password" name="new_password" class="form-control" required minlength="6">
-                            <small class="form-text text-muted">Minimum 6 characters</small>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-warning"><i class="fas fa-sync me-2"></i>Reset Password</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    {% endfor %}
+  .sf-label {
+    display:block; font-size:.72rem; font-weight:700;
+    text-transform:uppercase; letter-spacing:.08em; color:#7d97ac; margin-bottom:.45rem;
+  }
+  .sf-input {
+    width:100%; border:1.5px solid #e2e8f0; border-radius:10px;
+    font-family:'DM Sans',sans-serif; font-size:.9rem; padding:.7rem 1rem;
+    background:#fafbfc; color:#0d1b2a; outline:none;
+    transition:border-color .2s, box-shadow .2s, background .2s;
+    appearance:none;
+  }
+  .sf-input:focus { border-color:#f59e0b; background:#fff; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
+
+  .action-btn {
+    width:32px; height:32px; border-radius:8px;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:.8rem; border:none; cursor:pointer;
+    transition:all .15s; text-decoration:none;
+  }
+  .btn-del  { background:#fef2f2; color:#ef4444; }
+  .btn-del:hover  { background:#ef4444; color:#fff; }
+  .btn-key  { background:#fef9c3; color:#92400e; }
+  .btn-key:hover  { background:#f59e0b; color:#fff; }
+</style>
+
+<div class="sf-page-header">
+  <div>
+    <h1 class="sf-page-title">User Management</h1>
+    <div class="sf-page-sub">Manage who has access to your StockFlow workspace</div>
+  </div>
+  <button class="btn btn-primary d-flex align-items-center gap-2"
+          data-bs-toggle="modal" data-bs-target="#addUserModal">
+    <i class="fas fa-user-plus" style="font-size:.8rem;"></i> Add User
+  </button>
 </div>
+
+<div class="sf-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle table-card-mobile mb-0">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Business</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td data-label="Username">
+            <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+              <div style="width:32px;height:32px;border-radius:50%;background:#0d1b2a;color:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">
+                {{ user.username[:1].upper() }}
+              </div>
+              <strong>{{ user.username }}</strong>
+              {% if user._id|string == session.user_id %}
+              <span class="you-badge">YOU</span>
+              {% endif %}
+            </div>
+          </td>
+          <td data-label="Role">
+            <span class="badge {{ 'role-super' if user.role == 'super_admin' else 'role-admin' if user.role == 'admin' else 'role-cashier' }}">
+              {{ 'Super Admin' if user.role == 'super_admin' else user.role|capitalize }}
+            </span>
+          </td>
+          <td data-label="Business" style="color:#7d97ac;font-size:.855rem;">{{ user.business_name or '—' }}</td>
+          <td data-label="Created" style="font-size:.855rem;color:#7d97ac;">
+            {{ user.created_at.strftime('%d %b %Y') if user.created_at else 'Unknown' }}
+          </td>
+          <td data-label="Actions">
+            {% if user._id|string != session.user_id %}
+            <div style="display:flex;gap:.4rem;">
+              {% if session.role in ['admin', 'super_admin'] %}
+              <a href="{{ url_for('delete_user', user_id=user._id) }}"
+                 class="action-btn btn-del"
+                 onclick="return confirm('Delete {{ user.username }}?')"
+                 title="Delete user">
+                <i class="fas fa-trash"></i>
+              </a>
+              {% endif %}
+              {% if session.role == 'super_admin' %}
+              <button class="action-btn btn-key"
+                      data-bs-toggle="modal"
+                      data-bs-target="#resetModal{{ user._id }}"
+                      title="Reset password">
+                <i class="fas fa-key"></i>
+              </button>
+              {% endif %}
+            </div>
+            {% else %}
+            <span style="font-size:.75rem;color:#b3c5cf;">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5">
+            <div style="text-align:center;padding:3rem 1rem;color:#7d97ac;">
+              <i class="fas fa-users" style="font-size:2rem;opacity:.2;display:block;margin-bottom:.75rem;"></i>
+              No users found
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Add User Modal ── -->
+<div class="modal fade sf-modal" id="addUserModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('add_user') }}">
+        <div class="modal-header" style="background:#0d1b2a;">
+          <h5 class="modal-title text-white d-flex align-items-center gap-2">
+            <i class="fas fa-user-plus" style="color:#f59e0b;font-size:.9rem;"></i> Add New User
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="sf-label">Username</label>
+            <input type="text" name="username" class="sf-input" required autocomplete="off" placeholder="e.g., john_cashier">
+          </div>
+          <div class="mb-3">
+            <label class="sf-label">Password</label>
+            <input type="password" name="password" class="sf-input" required placeholder="Min. 6 characters">
+          </div>
+          <div class="mb-2">
+            <label class="sf-label">Role</label>
+            <select name="role" class="sf-input">
+              <option value="cashier">Cashier</option>
+              {% if session.role in ['admin', 'super_admin'] %}
+              <option value="admin">Branch Admin</option>
+              {% endif %}
+            </select>
+            <div style="font-size:.72rem;color:#7d97ac;margin-top:.4rem;">
+              {% if session.role == 'super_admin' %}Super admins can create branch admins.
+              {% else %}You can create cashiers or branch admins.{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-save me-1"></i> Add User
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Reset Password Modals ── -->
+{% for user in users %}
+{% if session.role == 'super_admin' and user._id|string != session.user_id %}
+<div class="modal fade sf-modal" id="resetModal{{ user._id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('reset_user_password', user_id=user._id) }}">
+        <div class="modal-header" style="background:#92400e;">
+          <h5 class="modal-title text-white d-flex align-items-center gap-2">
+            <i class="fas fa-key" style="font-size:.9rem;"></i> Reset Password — {{ user.username }}
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="sf-label">New Password</label>
+            <input type="password" name="new_password" class="sf-input" required minlength="6" placeholder="Minimum 6 characters">
+            <div style="font-size:.72rem;color:#7d97ac;margin-top:.4rem;">Minimum 6 characters</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning btn-sm">
+            <i class="fas fa-sync me-1"></i> Reset Password
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
 {% endblock %}

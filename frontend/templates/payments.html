@@ -1,75 +1,153 @@
 {% extends "base.html" %}
 {% block title %}Payments Received - StockFlow{% endblock %}
 {% block content %}
-<div class="container-fluid mt-4 px-3">
-    <h1 class="mb-4">Payments Received</h1>
 
-    {% if not is_super_admin %}
-    <div class="mb-4">
-        <a href="{{ url_for('payments.new') }}" class="btn btn-success">
-            <i class="fas fa-plus me-2"></i>Record New Payment
-        </a>
-    </div>
-    {% endif %}
+<style>
+  .method-chip {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-size: .72rem; font-weight: 600;
+    padding: .25rem .65rem; border-radius: 999px;
+  }
+  .chip-cash   { background: #ecfdf5; color: #065f46; }
+  .chip-mpesa  { background: #fef9c3; color: #92400e; }
+  .chip-bank   { background: #eff6ff; color: #1e40af; }
+  .chip-cheque { background: #f5f3ff; color: #5b21b6; }
+  .chip-other  { background: #f3f4f6; color: #374151; }
 
-    {% if is_super_admin %}
-    {% for biz_name, biz_payments in grouped.items() %}
-    <div class="mb-5">
-        <div class="d-flex align-items-center mb-3 gap-2">
-            <span class="badge bg-primary fs-6 px-3 py-2">
-                <i class="fas fa-building me-2"></i>{{ biz_name }}
-            </span>
-            <span class="badge bg-secondary">{{ biz_payments|length }} payment{{ 's' if biz_payments|length != 1 }}</span>
-            <span class="badge bg-success">
-                KSh {{ "%.2f"|format(biz_payments|sum(attribute='amount')) }} total
-            </span>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-striped table-card-mobile">
-                <thead class="table-dark">
-                    <tr><th>Date</th><th>Client</th><th>Amount</th><th>Method</th><th>Recorded By</th></tr>
-                </thead>
-                <tbody>
-                    {% for payment in biz_payments %}
-                    <tr>
-                        <td data-label="Date">{{ payment.date.strftime('%b %d, %Y %H:%M') }}</td>
-                        <td data-label="Client"><strong>{{ payment.client_name }}</strong></td>
-                        <td data-label="Amount">KSh {{ "%.2f"|format(payment.amount) }}</td>
-                        <td data-label="Method">{{ payment.method }}</td>
-                        <td data-label="Recorded By">{{ payment.recorded_by }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% else %}
-    <div class="alert alert-info">No payments found in any business.</div>
-    {% endfor %}
+  .sf-page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem; margin-bottom: 1.75rem;
+  }
+  .sf-page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -.025em; margin: 0; }
+  .sf-page-sub   { font-size: .82rem; color: #7d97ac; margin-top: .2rem; }
 
-    {% else %}
-    <div class="table-responsive">
-        <table class="table table-striped table-card-mobile">
-            <thead class="table-dark">
-                <tr><th>Date</th><th>Client</th><th>Amount</th><th>Method</th><th>Recorded By</th></tr>
-            </thead>
-            <tbody>
-                {% for payment in payments %}
-                <tr>
-                    <td data-label="Date">{{ payment.date.strftime('%b %d, %Y %H:%M') }}</td>
-                    <td data-label="Client"><strong>{{ payment.client_name }}</strong></td>
-                    <td data-label="Amount">KSh {{ "%.2f"|format(payment.amount) }}</td>
-                    <td data-label="Method">{{ payment.method }}</td>
-                    <td data-label="Recorded By">{{ payment.recorded_by }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" class="text-center text-muted">No payments recorded yet</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
+  .biz-header {
+    display: flex; align-items: center; gap: .65rem;
+    margin: 1.5rem 0 .85rem;
+  }
+  .biz-badge {
+    display: inline-flex; align-items: center; gap: .45rem;
+    background: #0d1b2a; color: rgba(255,255,255,.85);
+    border-radius: 10px; padding: .4rem .85rem;
+    font-size: .78rem; font-weight: 600; letter-spacing: .01em;
+  }
+  .biz-count { font-size: .72rem; font-weight: 600; color: #7d97ac; }
+
+  .sf-card {
+    background: #fff; border: 1px solid #e8edf2; border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
+    overflow: hidden;
+  }
+</style>
+
+<div class="sf-page-header">
+  <div>
+    <h1 class="sf-page-title">Payments Received</h1>
+    <div class="sf-page-sub">Track all client payments and settlement history</div>
+  </div>
+  {% if not is_super_admin %}
+  <a href="{{ url_for('payments.new') }}" class="btn btn-primary d-flex align-items-center gap-2">
+    <i class="fas fa-plus" style="font-size:.8rem;"></i> Record Payment
+  </a>
+  {% endif %}
 </div>
+
+{% if is_super_admin %}
+
+  {% for biz_name, biz_payments in grouped.items() %}
+  <div class="mb-5">
+    <div class="biz-header">
+      <div class="biz-badge">
+        <i class="fas fa-building" style="font-size:.75rem;opacity:.6;"></i> {{ biz_name }}
+      </div>
+      <span class="biz-count">{{ biz_payments|length }} payment{{ 's' if biz_payments|length != 1 }}</span>
+      <span class="method-chip chip-cash">
+        KSh {{ "%.2f"|format(biz_payments|sum(attribute='amount')) }} total
+      </span>
+    </div>
+
+    <div class="sf-card">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle table-card-mobile mb-0">
+          <thead>
+            <tr>
+              <th>Date</th><th>Client</th><th>Amount</th>
+              <th>Method</th><th>Recorded By</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for payment in biz_payments %}
+            <tr>
+              <td data-label="Date">
+                <span style="font-weight:600;">{{ payment.date.strftime('%d %b %Y') }}</span>
+                <span style="font-size:.75rem;color:#7d97ac;display:block;">{{ payment.date.strftime('%H:%M') }}</span>
+              </td>
+              <td data-label="Client"><strong>{{ payment.client_name }}</strong></td>
+              <td data-label="Amount">
+                <strong style="color:#10b981;">KSh {{ "%.2f"|format(payment.amount) }}</strong>
+              </td>
+              <td data-label="Method">
+                {% set m = payment.method|lower %}
+                <span class="method-chip chip-{{ 'mpesa' if 'pesa' in m else 'bank' if 'bank' in m else 'cheque' if 'cheq' in m else 'cash' if 'cash' in m else 'other' }}">
+                  {{ payment.method }}
+                </span>
+              </td>
+              <td data-label="Recorded By" style="color:#7d97ac;font-size:.855rem;">{{ payment.recorded_by }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info">No payments found in any business.</div>
+  {% endfor %}
+
+{% else %}
+
+  <div class="sf-card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle table-card-mobile mb-0">
+        <thead>
+          <tr>
+            <th>Date</th><th>Client</th><th>Amount</th>
+            <th>Method</th><th>Recorded By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for payment in payments %}
+          <tr>
+            <td data-label="Date">
+              <span style="font-weight:600;">{{ payment.date.strftime('%d %b %Y') }}</span>
+              <span style="font-size:.75rem;color:#7d97ac;display:block;">{{ payment.date.strftime('%H:%M') }}</span>
+            </td>
+            <td data-label="Client"><strong>{{ payment.client_name }}</strong></td>
+            <td data-label="Amount">
+              <strong style="color:#10b981;">KSh {{ "%.2f"|format(payment.amount) }}</strong>
+            </td>
+            <td data-label="Method">
+              {% set m = payment.method|lower %}
+              <span class="method-chip chip-{{ 'mpesa' if 'pesa' in m else 'bank' if 'bank' in m else 'cheque' if 'cheq' in m else 'cash' if 'cash' in m else 'other' }}">
+                {{ payment.method }}
+              </span>
+            </td>
+            <td data-label="Recorded By" style="color:#7d97ac;font-size:.855rem;">{{ payment.recorded_by }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5">
+              <div style="text-align:center;padding:3rem 1rem;color:#7d97ac;">
+                <i class="fas fa-money-bill-wave" style="font-size:2rem;opacity:.2;display:block;margin-bottom:.75rem;"></i>
+                No payments recorded yet
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% endif %}
 {% endblock %}

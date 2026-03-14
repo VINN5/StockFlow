@@ -2,223 +2,266 @@
 {% block title %}Request Payment - {{ client.name }}{% endblock %}
 {% block content %}
 <style>
-  .pr-card { background:#fff; border-radius:14px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06); padding:1.5rem; margin-bottom:1rem; }
-  .pr-balance { font-size:2rem; font-weight:800; color:#dc2626; line-height:1; }
-  .pr-section-title { font-size:.7rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:#6b7280; margin:0 0 .75rem; }
-  .pr-method-btn { width:100%; padding:.85rem 1rem; border-radius:12px; border:2px solid #e5e7eb; background:#fff; font-weight:600; font-size:.9rem; display:flex; align-items:center; gap:.75rem; cursor:pointer; transition:all .15s; text-align:left; }
-  .pr-method-btn:hover:not(:disabled) { border-color:#2563eb; background:#eff6ff; }
-  .pr-method-btn:disabled { opacity:.45; cursor:not-allowed; }
-  .pr-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
-  .pr-wa  .pr-icon { background:#dcfce7; color:#16a34a; }
-  .pr-sms .pr-icon { background:#eff6ff; color:#2563eb; }
-  .pr-stk .pr-icon { background:#fef9c3; color:#ca8a04; }
-  .sale-row { display:flex; justify-content:space-between; align-items:flex-start; padding:.65rem 0; border-bottom:1px solid #f3f4f6; font-size:.85rem; }
+  .rq-wrap { max-width:600px; }
+  .sf-breadcrumb { display:flex; align-items:center; gap:.5rem; font-size:.78rem; color:#7d97ac; margin-bottom:1.5rem; }
+  .sf-breadcrumb a { color:#7d97ac; text-decoration:none; }
+  .sf-breadcrumb a:hover { color:#0d1b2a; }
+  .sf-breadcrumb-sep { opacity:.4; }
+  .sf-breadcrumb-cur { color:#0d1b2a; font-weight:600; }
+
+  .rq-card { background:#fff; border:1px solid #e8edf2; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05); margin-bottom:.85rem; overflow:hidden; }
+  .rq-card-body { padding:1.25rem 1.4rem; }
+
+  /* client summary */
+  .client-summary { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; }
+  .client-name    { font-size:1.1rem; font-weight:700; color:#0d1b2a; }
+  .client-phone   { font-size:.82rem; color:#7d97ac; margin-top:.25rem; font-family:'DM Mono',monospace; }
+  .client-kra     { font-size:.72rem; color:#b3c5cf; margin-top:.1rem; }
+  .balance-display { text-align:right; }
+  .balance-label  { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#7d97ac; }
+  .balance-amount { font-size:1.75rem; font-weight:800; color:#ef4444; letter-spacing:-.03em; font-family:'DM Mono',monospace; line-height:1; margin-top:.2rem; }
+
+  .no-phone-warn {
+    display:flex; align-items:center; gap:.5rem;
+    background:#fef2f2; border:1px solid #fecaca; border-radius:9px;
+    padding:.6rem .9rem; font-size:.78rem; color:#991b1b; margin-top:.75rem;
+  }
+
+  /* date input */
+  .date-row { display:flex; align-items:center; gap:.75rem; margin-top:.85rem; padding-top:.85rem; border-top:1px solid #f0f4f8; }
+  .date-label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#7d97ac; white-space:nowrap; }
+  .date-input { border:1.5px solid #e2e8f0; border-radius:9px; padding:.5rem .85rem; font-family:'DM Sans',sans-serif; font-size:.855rem; background:#fafbfc; outline:none; transition:border-color .2s; }
+  .date-input:focus { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
+
+  /* credit sales */
+  .sale-row { display:flex; justify-content:space-between; align-items:flex-start; padding:.65rem 0; border-bottom:1px solid #f3f7f9; font-size:.845rem; }
   .sale-row:last-child { border-bottom:none; }
-  .sale-items { font-size:.75rem; color:#6b7280; margin-top:.2rem; }
-  .pr-result { display:none; padding:.7rem 1rem; border-radius:10px; margin-top:.65rem; font-size:.875rem; font-weight:500; }
-  .pr-result.success { background:#dcfce7; color:#166534; display:block; }
-  .pr-result.error   { background:#fee2e2; color:#991b1b; display:block; }
-  .pr-amount-input { border:2px solid #e5e7eb; border-radius:10px; padding:.6rem 1rem; font-size:1rem; font-weight:600; width:100%; margin-bottom:.75rem; transition:border-color .15s; }
-  .pr-amount-input:focus { outline:none; border-color:#2563eb; }
+  .sale-date  { font-weight:600; color:#0d1b2a; }
+  .sale-items { font-size:.75rem; color:#7d97ac; margin-top:.2rem; line-height:1.5; }
+  .sale-amount { font-weight:700; color:#ef4444; white-space:nowrap; font-family:'DM Mono',monospace; }
+  .sales-total-row { display:flex; justify-content:space-between; font-weight:700; font-size:.875rem; margin-top:.65rem; padding-top:.65rem; border-top:2px solid #e8edf2; }
+
+  /* section title */
+  .rq-section-title { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#7d97ac; margin:.1rem 0 .75rem; }
+
+  /* method buttons */
+  .method-card {
+    display:flex; align-items:center; gap:.85rem;
+    padding:1rem 1.2rem; width:100%;
+    background:none; border:none; text-align:left; cursor:pointer;
+    transition:background .12s;
+    text-decoration:none; color:inherit;
+  }
+  .method-card:hover { background:#f8fafc; }
+  .method-card.disabled { opacity:.45; cursor:not-allowed; pointer-events:none; }
+
+  .method-icon { width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+  .mi-wa    { background:#dcfce7; color:#16a34a; }
+  .mi-sms   { background:#eff6ff; color:#2563eb; }
+  .mi-stk   { background:#fef9c3; color:#ca8a04; }
+
+  .method-title { font-size:.875rem; font-weight:600; color:#0d1b2a; display:flex; align-items:center; gap:.5rem; }
+  .method-sub   { font-size:.75rem; color:#7d97ac; margin-top:.15rem; }
+  .method-arrow { margin-left:auto; font-size:.65rem; color:#b3c5cf; }
+
+  /* result */
+  .rq-result { display:none; margin:.6rem 1.2rem; padding:.65rem .9rem; border-radius:9px; font-size:.8rem; font-weight:600; }
+  .rq-result.success { background:#dcfce7; color:#166534; display:block; }
+  .rq-result.error   { background:#fee2e2; color:#991b1b; display:block; }
+
+  /* stk input */
+  .stk-input-wrap { padding:.6rem 1.2rem 1rem; border-top:1px solid #f0f4f8; }
+  .stk-prefix-row { display:flex; }
+  .stk-pre { display:flex; align-items:center; padding:0 .75rem; background:#f0f4f8; border:1.5px solid #e2e8f0; border-right:none; border-radius:9px 0 0 9px; font-size:.8rem; font-weight:600; color:#7d97ac; }
+  .stk-input { flex:1; border:1.5px solid #e2e8f0; border-radius:0 9px 9px 0; font-family:'DM Mono',monospace; font-size:.9rem; padding:.58rem .75rem; background:#fafbfc; color:#0d1b2a; outline:none; transition:border-color .2s; }
+  .stk-input:focus { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.12); }
+
+  .spinner { display:none; animation:spin .6s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
 </style>
 
-<div class="container-fluid mt-4 px-3" style="max-width:660px;">
-
-  <!-- Back + title -->
-  <div class="d-flex align-items-center gap-2 mb-3">
-    <a href="{{ url_for('clients.index') }}" class="btn btn-sm btn-outline-secondary">
-      <i class="fas fa-arrow-left"></i>
-    </a>
-    <h1 class="mb-0" style="font-size:1.2rem;font-weight:700;">Request Payment</h1>
+<div class="rq-wrap">
+  <div class="sf-breadcrumb">
+    <a href="{{ url_for('clients.index') }}">Clients</a>
+    <span class="sf-breadcrumb-sep">/</span>
+    <span class="sf-breadcrumb-cur">Request Payment</span>
   </div>
 
-  <!-- Client summary -->
-  <div class="pr-card">
-    <p class="pr-section-title">Client Details</p>
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-      <div>
-        <div style="font-size:1.15rem;font-weight:700;">{{ client.name }}</div>
-        <div style="color:#6b7280;font-size:.875rem;margin-top:.25rem;">
+  <h1 style="font-size:1.45rem;font-weight:700;letter-spacing:-.025em;margin-bottom:1.5rem;">Request Payment</h1>
+
+  <!-- Client card -->
+  <div class="rq-card">
+    <div class="rq-card-body">
+      <div class="client-summary">
+        <div>
+          <div class="client-name">{{ client.name }}</div>
           {% if client.contact %}
-            <i class="fas fa-phone me-1"></i>{{ client.contact }}
+          <div class="client-phone"><i class="fas fa-phone" style="font-size:.7rem;margin-right:.3rem;"></i>{{ client.contact }}</div>
           {% else %}
-            <span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>No phone number saved</span>
+          <div class="no-phone-warn">
+            <i class="fas fa-exclamation-triangle" style="flex-shrink:0;"></i>
+            No phone number saved — some options unavailable
+          </div>
           {% endif %}
+          {% if client.kra_pin %}<div class="client-kra">KRA: {{ client.kra_pin }}</div>{% endif %}
         </div>
-        {% if client.kra_pin %}
-        <div style="color:#9ca3af;font-size:.78rem;margin-top:.15rem;">KRA: {{ client.kra_pin }}</div>
-        {% endif %}
+        <div class="balance-display">
+          <div class="balance-label">Outstanding</div>
+          <div class="balance-amount">KSh {{ "%.2f"|format(client.balance) }}</div>
+        </div>
       </div>
-      <div class="text-end">
-        <div style="font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">Outstanding Balance</div>
-        <div class="pr-balance">KSh {{ "%.2f"|format(client.balance) }}</div>
+      <div class="date-row">
+        <span class="date-label">Due Date</span>
+        <input type="date" id="dueDateInput" class="date-input">
       </div>
-    </div>
-    <hr class="my-3">
-    <div class="d-flex align-items-center gap-2 flex-wrap">
-      <label style="font-size:.82rem;font-weight:600;white-space:nowrap;margin:0;">Due Date:</label>
-      <input type="date" id="dueDateInput" class="form-control form-control-sm" style="max-width:180px;">
     </div>
   </div>
 
   <!-- Credit sales breakdown -->
   {% if credit_sales %}
-  <div class="pr-card">
-    <p class="pr-section-title">Credit Sales Breakdown</p>
-    {% for sale in credit_sales %}
-    <div class="sale-row">
-      <div>
-        <div style="font-weight:600;">{{ sale.date.strftime('%d %b %Y') if sale.date else 'Unknown date' }}</div>
-        <div class="sale-items">
-          {% for item in sale.enriched_items %}
-          {{ item.quantity }} × {{ item.product_name }} @ KSh {{ "%.2f"|format(item.selling_price) }}<br>
-          {% endfor %}
+  <div class="rq-card">
+    <div class="rq-card-body">
+      <div class="rq-section-title">Credit Sales Breakdown</div>
+      {% for sale in credit_sales %}
+      <div class="sale-row">
+        <div>
+          <div class="sale-date">{{ sale.date.strftime('%d %b %Y') if sale.date else 'Unknown' }}</div>
+          <div class="sale-items">
+            {% for item in sale.enriched_items %}
+            {{ item.quantity }} × {{ item.product_name }} @ KSh {{ "%.2f"|format(item.selling_price) }}<br>
+            {% endfor %}
+          </div>
         </div>
+        <div class="sale-amount">KSh {{ "%.2f"|format(sale.total_amount) }}</div>
       </div>
-      <div style="font-weight:700;color:#dc2626;white-space:nowrap;">KSh {{ "%.2f"|format(sale.total_amount) }}</div>
-    </div>
-    {% endfor %}
-    <div class="d-flex justify-content-between mt-2 pt-2" style="border-top:2px solid #e5e7eb;font-weight:700;">
-      <span>Total Outstanding</span>
-      <span style="color:#dc2626;">KSh {{ "%.2f"|format(client.balance) }}</span>
+      {% endfor %}
+      <div class="sales-total-row">
+        <span>Total Outstanding</span>
+        <span style="color:#ef4444;font-family:'DM Mono',monospace;">KSh {{ "%.2f"|format(client.balance) }}</span>
+      </div>
     </div>
   </div>
   {% endif %}
 
   <!-- Send options -->
-  <p class="pr-section-title mt-3">Send Payment Request Via</p>
+  <div class="rq-section-title" style="margin-top:.5rem;">Send Payment Request Via</div>
 
   <!-- WhatsApp -->
-  <div class="pr-card" style="padding:1rem;">
+  <div class="rq-card">
     {% if wa_link %}
-    <a href="{{ wa_link }}" target="_blank" id="waLink"
-       class="pr-method-btn pr-wa" style="text-decoration:none;color:inherit;">
-      <div class="pr-icon"><i class="fab fa-whatsapp"></i></div>
+    <a href="{{ wa_link }}" target="_blank" class="method-card">
+      <div class="method-icon mi-wa"><i class="fab fa-whatsapp"></i></div>
       <div>
-        <div>Send via WhatsApp</div>
-        <div style="font-size:.75rem;color:#6b7280;font-weight:400;">Opens WhatsApp with pre-filled message</div>
+        <div class="method-title">WhatsApp</div>
+        <div class="method-sub">Opens WhatsApp with a pre-filled payment request</div>
       </div>
-      <i class="fas fa-external-link-alt ms-auto" style="font-size:.7rem;opacity:.35;"></i>
+      <i class="fas fa-external-link-alt method-arrow"></i>
     </a>
     {% else %}
-    <div class="pr-method-btn pr-wa" style="opacity:.45;cursor:not-allowed;">
-      <div class="pr-icon"><i class="fab fa-whatsapp"></i></div>
+    <div class="method-card disabled">
+      <div class="method-icon mi-wa"><i class="fab fa-whatsapp"></i></div>
       <div>
-        <div>Send via WhatsApp</div>
-        <div style="font-size:.75rem;color:#6b7280;font-weight:400;">Client has no phone number</div>
+        <div class="method-title">WhatsApp</div>
+        <div class="method-sub">Client has no phone number</div>
       </div>
     </div>
     {% endif %}
   </div>
 
   <!-- SMS -->
-  <div class="pr-card" style="padding:1rem;">
-    <button class="pr-method-btn pr-sms" id="smsBtn"
-            {% if not client.contact %}disabled{% endif %}>
-      <div class="pr-icon"><i class="fas fa-sms"></i></div>
+  <div class="rq-card">
+    <button class="method-card {% if not client.contact %}disabled{% endif %}" id="smsBtn">
+      <div class="method-icon mi-sms"><i class="fas fa-sms"></i></div>
       <div>
-        <div>
-          Send SMS Reminder
-          <span id="smsSpinner" style="display:none;"><i class="fas fa-spinner fa-spin ms-1"></i></span>
+        <div class="method-title">
+          Send SMS
+          <svg id="smsSpinner" class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
         </div>
-        <div style="font-size:.75rem;color:#6b7280;font-weight:400;">
-          {% if client.contact %}Sends to {{ client.contact }}{% else %}Client has no phone number{% endif %}
+        <div class="method-sub">
+          {% if client.contact %}Send to {{ client.contact }}{% else %}Client has no phone number{% endif %}
         </div>
       </div>
     </button>
-    <div class="pr-result" id="smsResult"></div>
+    <div class="rq-result" id="smsResult"></div>
   </div>
 
   <!-- STK Push -->
-  <div class="pr-card" style="padding:1rem;">
-    <p class="pr-section-title" style="margin-bottom:.6rem;">M-Pesa STK Push</p>
-    <input type="number" class="pr-amount-input" id="stkAmount"
-           value="{{ client.balance|round(0,'floor')|int }}"
-           min="1" step="1" placeholder="Amount (KSh)"
-           {% if not client.contact %}disabled{% endif %}>
-    <button class="pr-method-btn pr-stk" id="stkBtn"
-            {% if not client.contact %}disabled{% endif %}>
-      <div class="pr-icon"><i class="fas fa-mobile-alt"></i></div>
+  <div class="rq-card">
+    <button class="method-card {% if not client.contact %}disabled{% endif %}" id="stkBtn">
+      <div class="method-icon mi-stk"><i class="fas fa-mobile-alt"></i></div>
       <div>
-        <div>
-          Send STK Push
-          <span id="stkSpinner" style="display:none;"><i class="fas fa-spinner fa-spin ms-1"></i></span>
+        <div class="method-title">
+          M-Pesa STK Push
+          <svg id="stkSpinner" class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
         </div>
-        <div style="font-size:.75rem;color:#6b7280;font-weight:400;">
-          {% if client.contact %}Prompts {{ client.contact }} on M-Pesa{% else %}Client has no phone number{% endif %}
-        </div>
+        <div class="method-sub">{% if client.contact %}Prompts {{ client.contact }} on M-Pesa{% else %}Client has no phone number{% endif %}</div>
       </div>
     </button>
-    <div class="pr-result" id="stkResult"></div>
+    {% if client.contact %}
+    <div class="stk-input-wrap">
+      <label style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7d97ac;display:block;margin-bottom:.4rem;">Amount (KSh)</label>
+      <div class="stk-prefix-row">
+        <div class="stk-pre">KSh</div>
+        <input type="number" id="stkAmount" class="stk-input"
+               value="{{ client.balance|round(0,'floor')|int }}" min="1" step="1">
+      </div>
+    </div>
+    {% endif %}
+    <div class="rq-result" id="stkResult"></div>
   </div>
 
 </div>
 
 <script>
-  const clientId = "{{ client._id }}";
+const clientId = "{{ client._id }}";
+const due = new Date();
+due.setDate(due.getDate() + 7);
+document.getElementById('dueDateInput').value = due.toISOString().split('T')[0];
 
-  // Set default due date to 7 days from today
-  const due = new Date();
-  due.setDate(due.getDate() + 7);
-  document.getElementById('dueDateInput').value = due.toISOString().split('T')[0];
+function getDueDate() {
+  const raw = document.getElementById('dueDateInput').value;
+  if (!raw) return '{{ due_date }}';
+  return new Date(raw).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
 
-  function getDueDate() {
-    const raw = document.getElementById('dueDateInput').value;
-    if (!raw) return '{{ due_date }}';
-    const d = new Date(raw);
-    return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
-  }
+function showResult(id, ok, msg) {
+  const el = document.getElementById(id);
+  el.className = 'rq-result ' + (ok ? 'success' : 'error');
+  el.textContent = (ok ? '✓ ' : '✗ ') + msg;
+}
 
-  function showResult(elId, success, message) {
-    const el = document.getElementById(elId);
-    el.className = 'pr-result ' + (success ? 'success' : 'error');
-    el.textContent = (success ? '✓ ' : '✗ ') + message;
-  }
+function setLoading(btnId, spinnerId, on) {
+  document.getElementById(btnId).disabled = on;
+  document.getElementById(spinnerId).style.display = on ? 'block' : 'none';
+}
 
-  function setLoading(btnId, spinnerId, loading) {
-    document.getElementById(btnId).disabled = loading;
-    document.getElementById(spinnerId).style.display = loading ? 'inline' : 'none';
-  }
+document.getElementById('smsBtn')?.addEventListener('click', async () => {
+  setLoading('smsBtn','smsSpinner',true);
+  try {
+    const r = await fetch(`/payments/request/${clientId}/sms`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ due_date: getDueDate() })
+    });
+    const d = await r.json();
+    showResult('smsResult', d.success, d.message);
+  } catch { showResult('smsResult', false, 'Network error. Please try again.'); }
+  finally { setLoading('smsBtn','smsSpinner',false); }
+});
 
-  // SMS
-  document.getElementById('smsBtn')?.addEventListener('click', async () => {
-    setLoading('smsBtn', 'smsSpinner', true);
-    try {
-      const resp = await fetch(`/payments/request/${clientId}/sms`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ due_date: getDueDate() })
-      });
-      const data = await resp.json();
-      showResult('smsResult', data.success, data.message);
-    } catch (e) {
-      showResult('smsResult', false, 'Network error. Please try again.');
-    } finally {
-      setLoading('smsBtn', 'smsSpinner', false);
-    }
-  });
-
-  // STK Push
-  document.getElementById('stkBtn')?.addEventListener('click', async () => {
-    const amount = parseFloat(document.getElementById('stkAmount').value);
-    if (!amount || amount <= 0) {
-      showResult('stkResult', false, 'Please enter a valid amount.');
-      return;
-    }
-    setLoading('stkBtn', 'stkSpinner', true);
-    try {
-      const resp = await fetch(`/payments/request/${clientId}/stk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount })
-      });
-      const data = await resp.json();
-      showResult('stkResult', data.success, data.message);
-    } catch (e) {
-      showResult('stkResult', false, 'Network error. Please try again.');
-    } finally {
-      setLoading('stkBtn', 'stkSpinner', false);
-    }
-  });
+document.getElementById('stkBtn')?.addEventListener('click', async () => {
+  const amtEl = document.getElementById('stkAmount');
+  const amount = amtEl ? parseFloat(amtEl.value) : 0;
+  if (!amount || amount <= 0) { showResult('stkResult', false, 'Enter a valid amount.'); return; }
+  setLoading('stkBtn','stkSpinner',true);
+  try {
+    const r = await fetch(`/payments/request/${clientId}/stk`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ amount })
+    });
+    const d = await r.json();
+    showResult('stkResult', d.success, d.message);
+  } catch { showResult('stkResult', false, 'Network error. Please try again.'); }
+  finally { setLoading('stkBtn','stkSpinner',false); }
+});
 </script>
 {% endblock %}

@@ -1,52 +1,242 @@
 {% extends "base.html" %}
-
 {% block title %}Record Payment - StockFlow{% endblock %}
-
 {% block content %}
-<div class="container-fluid mt-4 px-3">
-    <h1 class="mb-4">Record Payment Received</h1>
 
-    <div class="row">
-        <div class="col-12 col-md-8 col-lg-6">
-            <div class="card shadow">
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('payments.add') }}">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Client</label>
-                            <select name="client_id" class="form-select" required>
-                                <option value="">Select client</option>
-                                {% for client in clients %}
-                                <option value="{{ client._id }}">{{ client.name }} (Balance: KSh {{ "%.2f"|format(client.balance) }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+<style>
+  .rp-wrap {
+    max-width: 560px;
+  }
+  .rp-card {
+    background: #fff;
+    border: 1px solid #e8edf2;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
+    overflow: hidden;
+  }
+  .rp-card-head {
+    background: #0d1b2a;
+    padding: 1.25rem 1.5rem;
+    display: flex; align-items: center; gap: .75rem;
+  }
+  .rp-card-head-icon {
+    width: 38px; height: 38px;
+    background: rgba(245,158,11,.18);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #f59e0b;
+    flex-shrink: 0;
+  }
+  .rp-card-head-title {
+    font-size: 1rem; font-weight: 700; color: #fff; margin: 0;
+  }
+  .rp-card-head-sub {
+    font-size: .75rem; color: rgba(255,255,255,.4); margin-top: .1rem;
+  }
+  .rp-body { padding: 1.75rem 1.5rem; }
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Amount Received</label>
-                            <div class="input-group">
-                                <span class="input-group-text">KSh</span>
-                                <input type="number" name="amount" step="0.01" class="form-control form-control-lg" required min="0.01" placeholder="0.00">
-                            </div>
-                        </div>
+  .rp-field { margin-bottom: 1.25rem; }
+  .rp-label {
+    display: block;
+    font-size: .72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: #7d97ac; margin-bottom: .5rem;
+  }
 
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold">Payment Method</label>
-                            <select name="method" class="form-select">
-                                <option value="Cash">Cash</option>
-                                <option value="M-Pesa">M-Pesa</option>
-                                <option value="Bank">Bank Transfer</option>
-                                <option value="Cheque">Cheque</option>
-                            </select>
-                        </div>
+  .rp-input {
+    width: 100%;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .92rem;
+    padding: .72rem 1rem;
+    background: #fafbfc;
+    color: #0d1b2a;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .rp-input:focus {
+    border-color: #f59e0b;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(245,158,11,.12);
+  }
 
-                        <div class="d-grid gap-2 d-sm-flex">
-                            <button type="submit" class="btn btn-success btn-lg flex-grow-1">Record Payment</button>
-                            <a href="{{ url_for('payments.index') }}" class="btn btn-secondary btn-lg">Cancel</a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+  .rp-prefix-group {
+    display: flex; gap: 0;
+  }
+  .rp-prefix {
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 .85rem;
+    background: #f0f4f8;
+    border: 1.5px solid #e2e8f0;
+    border-right: none;
+    border-radius: 10px 0 0 10px;
+    font-size: .85rem; font-weight: 600;
+    color: #7d97ac;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .rp-prefix-group .rp-input {
+    border-radius: 0 10px 10px 0;
+  }
+
+  /* method pills */
+  .method-pills { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .method-pill input { display: none; }
+  .method-pill label {
+    display: inline-flex; align-items: center; gap: .45rem;
+    padding: .5rem 1rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 999px;
+    font-size: .82rem; font-weight: 500;
+    color: #7d97ac;
+    cursor: pointer;
+    transition: all .15s;
+    user-select: none;
+    background: #fafbfc;
+  }
+  .method-pill input:checked + label {
+    border-color: #f59e0b;
+    background: rgba(245,158,11,.08);
+    color: #92400e;
+    font-weight: 600;
+  }
+  .method-pill label:hover {
+    border-color: #c9d5de;
+    color: #0d1b2a;
+  }
+
+  .rp-footer {
+    display: flex; gap: .75rem; flex-wrap: wrap;
+    padding-top: .5rem;
+    border-top: 1px solid #f0f4f8;
+    margin-top: 1.75rem;
+  }
+  .btn-rp-submit {
+    flex: 1;
+    background: #10b981;
+    border: none; border-radius: 10px;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .92rem; font-weight: 700;
+    padding: .82rem 1.25rem;
+    cursor: pointer;
+    transition: background .2s, transform .12s, box-shadow .2s;
+    min-width: 140px;
+  }
+  .btn-rp-submit:hover {
+    background: #0ea271;
+    box-shadow: 0 8px 20px rgba(16,185,129,.3);
+    transform: translateY(-1px);
+  }
+  .btn-rp-cancel {
+    padding: .82rem 1.25rem;
+    background: #f0f4f8;
+    border: none; border-radius: 10px;
+    color: #7d97ac;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .92rem; font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex; align-items: center;
+    transition: background .15s, color .15s;
+  }
+  .btn-rp-cancel:hover { background: #e2e8f0; color: #0d1b2a; }
+
+  /* breadcrumb */
+  .sf-breadcrumb {
+    display: flex; align-items: center; gap: .5rem;
+    font-size: .78rem; color: #7d97ac;
+    margin-bottom: 1.5rem;
+  }
+  .sf-breadcrumb a { color: #7d97ac; text-decoration: none; }
+  .sf-breadcrumb a:hover { color: #0d1b2a; }
+  .sf-breadcrumb-sep { opacity: .4; }
+  .sf-breadcrumb-cur { color: #0d1b2a; font-weight: 600; }
+</style>
+
+<div class="rp-wrap">
+  <div class="sf-breadcrumb">
+    <a href="{{ url_for('payments.index') }}">Payments</a>
+    <span class="sf-breadcrumb-sep">/</span>
+    <span class="sf-breadcrumb-cur">Record Payment</span>
+  </div>
+
+  <h1 style="font-size:1.45rem;font-weight:700;letter-spacing:-.025em;margin-bottom:1.5rem;">
+    Record Payment Received
+  </h1>
+
+  <div class="rp-card">
+    <div class="rp-card-head">
+      <div class="rp-card-head-icon">
+        <i class="fas fa-money-bill-wave" style="font-size:.9rem;"></i>
+      </div>
+      <div>
+        <div class="rp-card-head-title">New Payment Entry</div>
+        <div class="rp-card-head-sub">Settle client credit balance</div>
+      </div>
     </div>
+
+    <div class="rp-body">
+      <form method="POST" action="{{ url_for('payments.add') }}">
+
+        <div class="rp-field">
+          <label class="rp-label" for="client_id">Client</label>
+          <select name="client_id" id="client_id" class="rp-input" required>
+            <option value="">— Select client —</option>
+            {% for client in clients %}
+            <option value="{{ client._id }}">
+              {{ client.name }}
+              {% if client.balance > 0 %} · KSh {{ "%.2f"|format(client.balance) }} owed{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="rp-field">
+          <label class="rp-label" for="amount">Amount Received</label>
+          <div class="rp-prefix-group">
+            <div class="rp-prefix">KSh</div>
+            <input class="rp-input" type="number" name="amount" id="amount"
+                   step="0.01" min="0.01" placeholder="0.00" required>
+          </div>
+        </div>
+
+        <div class="rp-field">
+          <label class="rp-label">Payment Method</label>
+          <div class="method-pills">
+            <div class="method-pill">
+              <input type="radio" name="method" id="m_cash" value="Cash" checked>
+              <label for="m_cash">💵 Cash</label>
+            </div>
+            <div class="method-pill">
+              <input type="radio" name="method" id="m_mpesa" value="M-Pesa">
+              <label for="m_mpesa">📱 M-Pesa</label>
+            </div>
+            <div class="method-pill">
+              <input type="radio" name="method" id="m_bank" value="Bank">
+              <label for="m_bank">🏦 Bank Transfer</label>
+            </div>
+            <div class="method-pill">
+              <input type="radio" name="method" id="m_cheque" value="Cheque">
+              <label for="m_cheque">📄 Cheque</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="rp-footer">
+          <button type="submit" class="btn-rp-submit">
+            <i class="fas fa-check me-2" style="font-size:.85rem;"></i>Record Payment
+          </button>
+          <a href="{{ url_for('payments.index') }}" class="btn-rp-cancel">
+            Cancel
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
 </div>
+
 {% endblock %}

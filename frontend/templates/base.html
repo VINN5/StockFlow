@@ -1,366 +1,518 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}StockFlow{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f4f6f9;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}StockFlow{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       TOKENS
+    ══════════════════════════════════════════ */
+    :root {
+      --navy:    #0d1b2a;
+      --navy2:   #122134;
+      --navy3:   #1a2f45;
+      --slate:   #243c53;
+      --amber:   #f59e0b;
+      --amber2:  #fbbf24;
+      --green:   #10b981;
+      --red:     #ef4444;
+      --blue:    #3b82f6;
+      --muted:   #7d97ac;
+      --muted2:  #b3c5cf;
+      --border:  rgba(255,255,255,.07);
+      --border2: rgba(255,255,255,.04);
+      --bg:      #f0f4f8;
+      --card:    #ffffff;
+      --ink:     #0d1b2a;
+      --radius:  14px;
+      --sidebar-w: 230px;
+      --topbar-h:  56px;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+    }
 
-        /* ── Desktop sidebar ── */
-        .sidebar {
-            min-height: 100vh;
-            background: linear-gradient(to bottom, #4e73df, #224abe);
-            color: white;
-            width: 220px;
-            flex-shrink: 0;
-        }
+    *, *::before, *::after { box-sizing: border-box; }
 
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            padding: 12px 20px;
-            border-radius: 8px;
-            margin: 4px 10px;
-        }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      margin: 0;
+    }
 
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-        }
+    /* ═══════════════════════════════════════════
+       SIDEBAR
+    ══════════════════════════════════════════ */
+    .sf-sidebar {
+      position: fixed; top: 0; left: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--navy);
+      display: flex; flex-direction: column;
+      z-index: 200;
+      overflow: hidden;
+      transition: transform .25s cubic-bezier(.4,0,.2,1);
+    }
 
-        .sidebar .nav-link i {
-            width: 30px;
-            text-align: center;
-        }
+    /* subtle inner glow top */
+    .sf-sidebar::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 180px;
+      background: radial-gradient(ellipse 100% 100% at 50% 0%, rgba(245,158,11,.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
 
-        .main-content {
-            padding: 20px;
-            flex: 1;
-            min-width: 0;
-        }
+    .sf-logo {
+      padding: 1.4rem 1.4rem 1rem;
+      display: flex; align-items: center; gap: .75rem;
+      flex-shrink: 0;
+      position: relative;
+    }
 
-        .stat-card {
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            padding: 25px;
-            text-align: center;
-            transition: transform 0.2s;
-        }
+    .sf-logo-icon {
+      width: 38px; height: 38px;
+      background: var(--amber);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--navy);
+      flex-shrink: 0;
+    }
 
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
+    .sf-logo-text {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.02em;
+      line-height: 1.1;
+    }
+    .sf-logo-sub {
+      font-size: .62rem;
+      color: rgba(255,255,255,.3);
+      letter-spacing: .04em;
+      font-weight: 400;
+    }
 
-        .stat-card i {
-            font-size: 3rem;
-            opacity: 0.8;
-        }
+    /* divider */
+    .sf-divider {
+      height: 1px;
+      background: var(--border);
+      margin: .35rem 1.2rem .7rem;
+    }
 
-        .logo-text {
-            font-size: 1.6rem;
-            font-weight: bold;
-        }
+    /* nav label */
+    .sf-nav-label {
+      font-size: .6rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.22);
+      padding: 0 1.4rem .4rem;
+    }
 
-        .bg-purple {
-            background: linear-gradient(135deg, #9c27b0, #673ab7) !important;
-        }
+    /* nav link */
+    .sf-nav { flex: 1; overflow-y: auto; padding: 0 .8rem 1rem; }
+    .sf-nav::-webkit-scrollbar { width: 0; }
 
-        /* ── Mobile top navbar ── */
-        .mobile-topbar {
-            display: none;
-            background: linear-gradient(135deg, #4e73df, #224abe);
-            color: white;
-            padding: 12px 16px;
-            position: sticky;
-            top: 0;
-            z-index: 1030;
-        }
+    .sf-link {
+      display: flex; align-items: center; gap: .7rem;
+      padding: .62rem .85rem;
+      border-radius: 10px;
+      color: rgba(255,255,255,.55);
+      font-size: .855rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background .15s, color .15s;
+      margin-bottom: .15rem;
+      cursor: pointer;
+      border: none; background: none; width: 100%; text-align: left;
+    }
 
-        .mobile-topbar .logo-text {
-            font-size: 1.2rem;
-        }
+    .sf-link i {
+      width: 18px; text-align: center; font-size: .85rem;
+      flex-shrink: 0;
+    }
 
-        /* ── Offcanvas sidebar styles ── */
-        .offcanvas-sidebar {
-            background: linear-gradient(to bottom, #4e73df, #224abe) !important;
-            width: 280px !important;
-        }
+    .sf-link:hover {
+      background: rgba(255,255,255,.07);
+      color: rgba(255,255,255,.9);
+      text-decoration: none;
+    }
 
-        .offcanvas-sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.85);
-            padding: 13px 20px;
-            border-radius: 8px;
-            margin: 3px 8px;
-            font-size: 0.95rem;
-        }
+    .sf-link.active {
+      background: rgba(245,158,11,.15);
+      color: var(--amber);
+    }
 
-        .offcanvas-sidebar .nav-link:hover,
-        .offcanvas-sidebar .nav-link.active {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-        }
+    .sf-link.active i { color: var(--amber); }
 
-        .offcanvas-sidebar .nav-link i {
-            width: 28px;
-            text-align: center;
-        }
+    .sf-link-danger:hover {
+      background: rgba(239,68,68,.1);
+      color: #fca5a5;
+    }
 
-        .offcanvas-sidebar .btn-close {
-            filter: invert(1);
-        }
+    /* user badge */
+    .sf-user {
+      flex-shrink: 0;
+      padding: .9rem 1.2rem;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: .65rem;
+    }
+    .sf-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--amber);
+      color: var(--navy);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .8rem;
+      flex-shrink: 0;
+    }
+    .sf-user-name {
+      font-size: .8rem;
+      font-weight: 600;
+      color: rgba(255,255,255,.85);
+      white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .sf-user-role {
+      font-size: .67rem;
+      color: rgba(255,255,255,.3);
+      margin-top: .05rem;
+    }
 
-        /* ── Responsive table cards (mobile) ── */
-        @media (max-width: 767.98px) {
-            .sidebar {
-                display: none !important;
-            }
+    /* ═══════════════════════════════════════════
+       MOBILE TOPBAR
+    ══════════════════════════════════════════ */
+    .sf-topbar {
+      display: none;
+      position: sticky; top: 0; z-index: 150;
+      height: var(--topbar-h);
+      background: var(--navy);
+      align-items: center; justify-content: space-between;
+      padding: 0 1rem;
+      box-shadow: 0 1px 0 var(--border);
+    }
 
-            .mobile-topbar {
-                display: flex !important;
-                align-items: center;
-                justify-content: space-between;
-            }
+    .sf-topbar-logo {
+      display: flex; align-items: center; gap: .55rem;
+      color: #fff; font-weight: 700; font-size: 1rem;
+      letter-spacing: -.01em;
+    }
 
-            .main-content {
-                padding: 12px;
-            }
+    .sf-topbar-logo-icon {
+      width: 30px; height: 30px;
+      background: var(--amber);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--navy);
+    }
 
-            /* Stack tables as cards on mobile */
-            .table-card-mobile thead {
-                display: none;
-            }
+    .sf-menu-btn {
+      width: 36px; height: 36px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.8);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .sf-menu-btn:hover { background: rgba(255,255,255,.12); }
 
-            .table-card-mobile tbody tr {
-                display: block;
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-                margin-bottom: 12px;
-                padding: 12px;
-                border: none !important;
-            }
+    /* ═══════════════════════════════════════════
+       OFFCANVAS SIDEBAR (mobile)
+    ══════════════════════════════════════════ */
+    .sf-offcanvas {
+      --bs-offcanvas-width: 260px;
+      background: var(--navy) !important;
+    }
+    .sf-offcanvas .btn-close { filter: invert(1) opacity(.5); }
 
-            .table-card-mobile tbody td {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                padding: 5px 0;
-                border: none !important;
-                font-size: 0.9rem;
-                flex-wrap: wrap;
-                gap: 4px;
-            }
+    /* ═══════════════════════════════════════════
+       MAIN LAYOUT
+    ══════════════════════════════════════════ */
+    .sf-layout {
+      display: flex;
+      min-height: 100vh;
+    }
 
-            .table-card-mobile tbody td::before {
-                content: attr(data-label);
-                font-weight: 600;
-                color: #666;
-                font-size: 0.78rem;
-                text-transform: uppercase;
-                letter-spacing: 0.03em;
-                white-space: nowrap;
-                margin-right: 8px;
-                min-width: 90px;
-            }
+    .sf-main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      min-width: 0;
+      padding: 1.5rem 1.75rem 3rem;
+    }
 
-            .table-card-mobile tbody tr:last-child {
-                margin-bottom: 0;
-            }
+    /* ═══════════════════════════════════════════
+       PAGE COMPONENTS
+    ══════════════════════════════════════════ */
 
-            /* Adjust cards on mobile */
-            .stat-card {
-                padding: 16px;
-            }
+    /* page title */
+    h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: -.025em;
+      color: var(--ink);
+    }
 
-            .stat-card i {
-                font-size: 2rem;
-            }
+    /* cards */
+    .sf-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid #e8edf2;
+      box-shadow: var(--shadow);
+    }
 
-            h1 { font-size: 1.4rem; }
-            h2 { font-size: 1.2rem; }
-            h3 { font-size: 1.1rem; }
-        }
-    </style>
+    /* tables */
+    .table {
+      font-size: .875rem;
+    }
+    .table > :not(caption) > * > * {
+      padding: .75rem 1rem;
+    }
+    .table-dark th { background: var(--navy2) !important; color: rgba(255,255,255,.75); font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+    .table-hover > tbody > tr:hover > * { background-color: #f6f9fc; }
+
+    /* badges */
+    .badge {
+      font-size: .7rem;
+      font-weight: 600;
+      padding: .3em .65em;
+      border-radius: 6px;
+    }
+
+    /* buttons */
+    .btn {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      border-radius: 9px;
+      font-size: .855rem;
+    }
+    .btn-primary { background: var(--navy2); border-color: var(--navy2); }
+    .btn-primary:hover { background: var(--navy3); border-color: var(--navy3); }
+    .btn-success { background: var(--green); border-color: var(--green); }
+    .btn-success:hover { background: #0ea271; border-color: #0ea271; }
+    .btn-warning { background: var(--amber); border-color: var(--amber); color: var(--navy); }
+    .btn-warning:hover { background: var(--amber2); border-color: var(--amber2); color: var(--navy); }
+
+    /* form controls */
+    .form-control, .form-select {
+      font-family: 'DM Sans', sans-serif;
+      font-size: .875rem;
+      border-radius: 9px;
+      border-color: #dde4ea;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 3px rgba(245,158,11,.12);
+    }
+
+    /* modal */
+    .modal-content { border-radius: var(--radius); border: none; box-shadow: 0 24px 64px rgba(0,0,0,.15); }
+    .modal-header { border-radius: var(--radius) var(--radius) 0 0; }
+
+    /* alerts */
+    .alert { border-radius: 10px; font-size: .875rem; }
+
+    /* ── Table card mobile ── */
+    @media (max-width: 767px) {
+      .table-card-mobile thead { display: none; }
+      .table-card-mobile tbody tr {
+        display: block;
+        background: var(--card);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        margin-bottom: .75rem;
+        padding: .85rem 1rem;
+        border: 1px solid #e8edf2 !important;
+      }
+      .table-card-mobile tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: .35rem 0;
+        border: none !important;
+        font-size: .875rem;
+        gap: .5rem;
+        flex-wrap: wrap;
+      }
+      .table-card-mobile tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--muted);
+        font-size: .7rem;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        min-width: 80px;
+        flex-shrink: 0;
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════ */
+    @media (max-width: 991px) {
+      .sf-sidebar { transform: translateX(-100%); }
+      .sf-main { margin-left: 0; padding: 1rem 1rem 3rem; }
+      .sf-topbar { display: flex; }
+    }
+    @media (max-width: 575px) {
+      h1 { font-size: 1.25rem; }
+    }
+  </style>
 </head>
-
 <body>
 
-    <!-- ── Mobile top bar ── -->
-    <div class="mobile-topbar">
-        <span class="logo-text"><i class="fas fa-boxes-stacked me-2"></i>StockFlow</span>
-        <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar">
-            <i class="fas fa-bars"></i>
-        </button>
+  <!-- ── Mobile top bar ── -->
+  <div class="sf-topbar">
+    <div class="sf-topbar-logo">
+      <div class="sf-topbar-logo-icon">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="7" width="9" height="9" rx="2" fill="currentColor" opacity=".9"/>
+          <rect x="13" y="7" width="9" height="9" rx="2" fill="currentColor" opacity=".55"/>
+          <rect x="2" y="2" width="20" height="4" rx="1.5" fill="currentColor" opacity=".4"/>
+        </svg>
+      </div>
+      StockFlow
+    </div>
+    <button class="sf-menu-btn" type="button"
+            data-bs-toggle="offcanvas" data-bs-target="#sfMobileSidebar">
+      <i class="fas fa-bars" style="font-size:.85rem;"></i>
+    </button>
+  </div>
+
+  <!-- ── Mobile offcanvas ── -->
+  <div class="offcanvas offcanvas-start sf-offcanvas" tabindex="-1" id="sfMobileSidebar">
+    <div class="offcanvas-header border-0 pb-0">
+      <div class="sf-topbar-logo" style="color:#fff;">
+        <div class="sf-topbar-logo-icon">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="7" width="9" height="9" rx="2" fill="currentColor" opacity=".9"/>
+            <rect x="13" y="7" width="9" height="9" rx="2" fill="currentColor" opacity=".55"/>
+            <rect x="2" y="2" width="20" height="4" rx="1.5" fill="currentColor" opacity=".4"/>
+          </svg>
+        </div>
+        StockFlow
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+      {% include '_sidebar_nav.html' ignore missing %}
+      <!-- fallback nav below if include unavailable -->
+      <nav style="padding:.75rem .8rem 0;">
+        <a class="sf-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard" onclick="sfNav(event,this)"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <a class="sf-link {% if request.path.startswith('/products') %}active{% endif %}" href="/products" onclick="sfNav(event,this)"><i class="fas fa-box"></i> Products</a>
+        <a class="sf-link {% if request.path.startswith('/suppliers') %}active{% endif %}" href="/suppliers" onclick="sfNav(event,this)"><i class="fas fa-truck"></i> Suppliers</a>
+        <a class="sf-link {% if request.path.startswith('/purchases') %}active{% endif %}" href="/purchases" onclick="sfNav(event,this)"><i class="fas fa-shopping-bag"></i> Purchases</a>
+        <a class="sf-link {% if request.path.startswith('/pos') %}active{% endif %}" href="/pos" onclick="sfNav(event,this)"><i class="fas fa-cash-register"></i> POS Sales</a>
+        <a class="sf-link {% if request.path.startswith('/sales') %}active{% endif %}" href="/sales" onclick="sfNav(event,this)"><i class="fas fa-chart-bar"></i> Sales Reports</a>
+        {% if session.role in ['admin', 'super_admin'] %}
+        <a class="sf-link {% if request.path.startswith('/clients') %}active{% endif %}" href="/clients" onclick="sfNav(event,this)"><i class="fas fa-user-friends"></i> Clients</a>
+        <a class="sf-link {% if request.path.startswith('/payments') %}active{% endif %}" href="/payments" onclick="sfNav(event,this)"><i class="fas fa-money-bill-wave"></i> Payments</a>
+        {% endif %}
+        <div class="sf-divider" style="margin:.5rem .4rem;"></div>
+        {% if session.role in ['admin', 'super_admin'] %}
+        <a class="sf-link {% if request.path.startswith('/users') %}active{% endif %}" href="/users" onclick="sfNav(event,this)"><i class="fas fa-users"></i> Users</a>
+        {% endif %}
+        {% if session.role == 'super_admin' %}
+        <a class="sf-link {% if request.path.startswith('/businesses') %}active{% endif %}" href="{{ url_for('businesses') }}" onclick="sfNav(event,this)"><i class="fas fa-building"></i> Businesses</a>
+        {% endif %}
+        <a class="sf-link sf-link-danger" href="/logout" onclick="sfNav(event,this)"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      </nav>
+
+      <div style="padding:.9rem 1.2rem;border-top:1px solid rgba(255,255,255,.07);margin-top:.5rem;display:flex;align-items:center;gap:.65rem;">
+        <div class="sf-avatar">{{ session.get('username', '?')[:1].upper() }}</div>
+        <div>
+          <div class="sf-user-name">{{ session.get('username', '') }}</div>
+          <div class="sf-user-role">{{ session.get('role', '')|capitalize }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Desktop sidebar ── -->
+  <div class="sf-sidebar" id="sfDesktopSidebar">
+    <div class="sf-logo">
+      <div class="sf-logo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="7" width="9" height="9" rx="2" fill="currentColor" opacity=".9"/>
+          <rect x="13" y="7" width="9" height="9" rx="2" fill="currentColor" opacity=".55"/>
+          <rect x="2" y="2" width="20" height="4" rx="1.5" fill="currentColor" opacity=".4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="sf-logo-text">StockFlow</div>
+        <div class="sf-logo-sub">Inventory &amp; POS</div>
+      </div>
     </div>
 
-    <!-- ── Mobile offcanvas sidebar ── -->
-    <div class="offcanvas offcanvas-start offcanvas-sidebar" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
-        <div class="offcanvas-header border-bottom border-white border-opacity-25 pb-3">
-            <h5 class="offcanvas-title text-white logo-text" id="mobileSidebarLabel">
-                <i class="fas fa-boxes-stacked me-2"></i>StockFlow
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body p-0">
-            <nav class="nav flex-column pt-2">
-                <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard" onclick="sidebarNav(event, this)">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
-                </a>
-                <a class="nav-link {% if request.path.startswith('/products') %}active{% endif %}" href="/products" onclick="sidebarNav(event, this)">
-                    <i class="fas fa-box"></i> Products
-                </a>
-                <a class="nav-link {% if request.path.startswith('/suppliers') %}active{% endif %}" href="/suppliers" onclick="sidebarNav(event, this)">
-                    <i class="fas fa-truck"></i> Suppliers
-                </a>
-                <a class="nav-link {% if request.path.startswith('/purchases') %}active{% endif %}" href="/purchases" onclick="sidebarNav(event, this)">
-                    <i class="fas fa-shopping-bag"></i> Purchases
-                </a>
-                <a class="nav-link {% if request.path.startswith('/pos') %}active{% endif %}" href="/pos" onclick="sidebarNav(event, this)">
-                    <i class="fas fa-cash-register"></i> POS Sales
-                </a>
+    <div class="sf-divider"></div>
 
-                {% if session.role in ['admin', 'super_admin'] %}
-                <a class="nav-link {% if request.path.startswith('/clients') %}active{% endif %}" href="/clients" onclick="sidebarNav(event, this)">
-                    <i class="fas fa-user-friends"></i> Clients
-                </a>
-                {% endif %}
+    <nav class="sf-nav">
+      <div class="sf-nav-label">Main</div>
+      <a class="sf-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+      <a class="sf-link {% if request.path.startswith('/products') %}active{% endif %}" href="/products"><i class="fas fa-box"></i> Products</a>
+      <a class="sf-link {% if request.path.startswith('/suppliers') %}active{% endif %}" href="/suppliers"><i class="fas fa-truck"></i> Suppliers</a>
+      <a class="sf-link {% if request.path.startswith('/purchases') %}active{% endif %}" href="/purchases"><i class="fas fa-shopping-bag"></i> Purchases</a>
+      <a class="sf-link {% if request.path.startswith('/pos') %}active{% endif %}" href="/pos"><i class="fas fa-cash-register"></i> POS Sales</a>
+      <a class="sf-link {% if request.path.startswith('/sales') %}active{% endif %}" href="/sales"><i class="fas fa-chart-bar"></i> Sales Reports</a>
 
-                {% if session.role in ['admin', 'super_admin'] %}
-                <a class="nav-link {% if request.path.startswith('/payments') %}active{% endif %}" href="/payments" onclick="sidebarNav(event, this)">
-                    <i class="fas fa-money-bill-wave"></i> Payments
-                </a>
-                {% endif %}
+      {% if session.role in ['admin', 'super_admin'] %}
+      <div class="sf-divider" style="margin:.7rem .4rem;"></div>
+      <div class="sf-nav-label">Finance</div>
+      <a class="sf-link {% if request.path.startswith('/clients') %}active{% endif %}" href="/clients"><i class="fas fa-user-friends"></i> Clients</a>
+      <a class="sf-link {% if request.path.startswith('/payments') %}active{% endif %}" href="/payments"><i class="fas fa-money-bill-wave"></i> Payments</a>
+      {% endif %}
 
-                <hr class="border-light opacity-50 mx-3">
+      <div class="sf-divider" style="margin:.7rem .4rem;"></div>
+      <div class="sf-nav-label">Admin</div>
 
-                {% if session.role in ['admin', 'super_admin'] %}
-                <a class="nav-link {% if request.path.startswith('/users') %}active{% endif %}" href="/users" onclick="sidebarNav(event, this)">
-                    <i class="fas fa-users"></i> Users
-                </a>
-                {% endif %}
+      {% if session.role in ['admin', 'super_admin'] %}
+      <a class="sf-link {% if request.path.startswith('/users') %}active{% endif %}" href="/users"><i class="fas fa-users"></i> Users</a>
+      {% endif %}
+      {% if session.role == 'super_admin' %}
+      <a class="sf-link {% if request.path.startswith('/businesses') %}active{% endif %}" href="{{ url_for('businesses') }}"><i class="fas fa-building"></i> Businesses</a>
+      {% endif %}
+      <a class="sf-link sf-link-danger" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </nav>
 
-                {% if session.role == 'super_admin' %}
-                <a class="nav-link {% if request.path.startswith('/businesses') %}active{% endif %}" href="{{ url_for('businesses') }}" onclick="sidebarNav(event, this)">
-                    <i class="fas fa-building"></i> Businesses
-                </a>
-                {% endif %}
-
-                <a class="nav-link" href="/logout" onclick="sidebarNav(event, this)">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
-            </nav>
-
-            <div class="text-center small text-white opacity-75 p-3 mt-2">
-                <p class="mb-0">Signed in as<br>
-                    <strong>{{ session['username'] }}</strong><br>
-                    <span class="badge bg-light text-dark mt-1">{{ session['role']|capitalize }}</span>
-                </p>
-            </div>
-        </div>
+    <div class="sf-user">
+      <div class="sf-avatar">{{ session.get('username', '?')[:1].upper() }}</div>
+      <div style="min-width:0;flex:1;">
+        <div class="sf-user-name">{{ session.get('username', '') }}</div>
+        <div class="sf-user-role">{{ session.get('role', '')|capitalize }}</div>
+      </div>
     </div>
+  </div>
 
-    <!-- ── Page layout ── -->
-    <div class="d-flex">
-
-        <!-- Desktop sidebar -->
-        <div class="sidebar p-3">
-            <div class="text-center mb-4">
-                <h1 class="logo-text"><i class="fas fa-boxes-stacked me-2"></i>StockFlow</h1>
-            </div>
-            <nav class="nav flex-column">
-                <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
-                </a>
-                <a class="nav-link {% if request.path.startswith('/products') %}active{% endif %}" href="/products">
-                    <i class="fas fa-box"></i> Products
-                </a>
-                <a class="nav-link {% if request.path.startswith('/suppliers') %}active{% endif %}" href="/suppliers">
-                    <i class="fas fa-truck"></i> Suppliers
-                </a>
-                <a class="nav-link {% if request.path.startswith('/purchases') %}active{% endif %}" href="/purchases">
-                    <i class="fas fa-shopping-bag"></i> Purchases
-                </a>
-                <a class="nav-link {% if request.path.startswith('/pos') %}active{% endif %}" href="/pos">
-                    <i class="fas fa-cash-register"></i> POS Sales
-                </a>
-
-                {% if session.role in ['admin', 'super_admin'] %}
-                <a class="nav-link {% if request.path.startswith('/clients') %}active{% endif %}" href="/clients">
-                    <i class="fas fa-user-friends"></i> Clients
-                </a>
-                {% endif %}
-
-                {% if session.role in ['admin', 'super_admin'] %}
-                <a class="nav-link {% if request.path.startswith('/payments') %}active{% endif %}" href="/payments">
-                    <i class="fas fa-money-bill-wave"></i> Payments
-                </a>
-                {% endif %}
-
-                <hr class="border-light opacity-50">
-
-                {% if session.role in ['admin', 'super_admin'] %}
-                <a class="nav-link {% if request.path.startswith('/users') %}active{% endif %}" href="/users">
-                    <i class="fas fa-users"></i> Users
-                </a>
-                {% endif %}
-
-                {% if session.role == 'super_admin' %}
-                <a class="nav-link {% if request.path.startswith('/businesses') %}active{% endif %}" href="{{ url_for('businesses') }}">
-                    <i class="fas fa-building"></i> Businesses
-                </a>
-                {% endif %}
-
-                <a class="nav-link" href="/logout">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
-            </nav>
-
-            <div class="mt-auto text-center small opacity-75 pt-4">
-                <p>Signed in as<br>
-                    <strong>{{ session['username'] }}</strong><br>
-                    Role: <span class="badge bg-light text-dark">{{ session['role']|capitalize }}</span>
-                </p>
-            </div>
-        </div>
-
-        <div class="flex-grow-1 main-content">
-            <div class="container-fluid px-0">
-                {% block content %}{% endblock %}
-            </div>
-        </div>
+  <!-- ── Page layout ── -->
+  <div class="sf-layout">
+    <div class="sf-main">
+      {% block content %}{% endblock %}
     </div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        // Close offcanvas first, then navigate — prevents Bootstrap dismiss
-        // from swallowing the tap on mobile before the href fires.
-        function sidebarNav(event, link) {
-            event.preventDefault();
-            var dest = link.getAttribute('href');
-            var offcanvasEl = document.getElementById('mobileSidebar');
-            var instance = bootstrap.Offcanvas.getInstance(offcanvasEl);
-            if (instance && offcanvasEl.classList.contains('show')) {
-                // Wait for the offcanvas hide animation, then navigate
-                offcanvasEl.addEventListener('hidden.bs.offcanvas', function handler() {
-                    offcanvasEl.removeEventListener('hidden.bs.offcanvas', handler);
-                    window.location.href = dest;
-                });
-                instance.hide();
-            } else {
-                // Offcanvas not open (e.g. desktop fallback) — navigate directly
-                window.location.href = dest;
-            }
-        }
-    </script>
-
-    {% block scripts %}{% endblock %}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Offcanvas-aware navigation (mobile)
+    function sfNav(event, link) {
+      event.preventDefault();
+      var dest = link.getAttribute('href');
+      var ocEl = document.getElementById('sfMobileSidebar');
+      var inst = ocEl ? bootstrap.Offcanvas.getInstance(ocEl) : null;
+      if (inst && ocEl.classList.contains('show')) {
+        ocEl.addEventListener('hidden.bs.offcanvas', function h() {
+          ocEl.removeEventListener('hidden.bs.offcanvas', h);
+          window.location.href = dest;
+        });
+        inst.hide();
+      } else {
+        window.location.href = dest;
+      }
+    }
+  </script>
+  {% block scripts %}{% endblock %}
 </body>
-
 </html>

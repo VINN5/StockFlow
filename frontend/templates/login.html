@@ -1,60 +1,295 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>StockFlow - Login</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-        }
-        .login-card {
-            border: none;
-            border-radius: 16px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-        }
-        .brand-icon {
-            font-size: 2.5rem;
-            color: #4e73df;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StockFlow — Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy:   #0d1b2a;
+      --navy2:  #1a2f45;
+      --slate:  #253d52;
+      --amber:  #f59e0b;
+      --amber2: #fbbf24;
+      --ice:    #e8f0fe;
+      --muted:  #8ca0b3;
+      --border: rgba(255,255,255,.08);
+      --card:   rgba(255,255,255,.035);
+      --radius: 16px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--navy);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── Background decoration ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(245,158,11,.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 80% at 80% 90%, rgba(13,107,179,.18) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    /* Subtle grid */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+
+    .login-wrap {
+      width: 100%;
+      max-width: 420px;
+      padding: 1.5rem;
+      position: relative;
+      z-index: 10;
+      animation: rise .55s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ── Brand mark ── */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: var(--amber);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.15rem;
+      color: var(--navy);
+      box-shadow: 0 0 0 6px rgba(245,158,11,.15);
+      flex-shrink: 0;
+    }
+
+    .brand-name {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.02em;
+    }
+
+    .brand-tag {
+      font-size: .72rem;
+      color: var(--muted);
+      font-weight: 400;
+      margin-top: .05rem;
+      letter-spacing: .02em;
+    }
+
+    /* ── Card ── */
+    .login-card {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: var(--radius);
+      padding: 2rem 2rem 2.25rem;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 32px 64px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.04) inset;
+    }
+
+    .card-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.025em;
+      margin-bottom: .35rem;
+    }
+
+    .card-sub {
+      font-size: .82rem;
+      color: var(--muted);
+      margin-bottom: 1.75rem;
+    }
+
+    /* ── Form ── */
+    .field-label {
+      display: block;
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: .5rem;
+    }
+
+    .field-input {
+      width: 100%;
+      background: rgba(255,255,255,.055);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 10px;
+      color: #fff;
+      font-family: inherit;
+      font-size: .92rem;
+      padding: .75rem 1rem;
+      outline: none;
+      transition: border-color .2s, background .2s, box-shadow .2s;
+      -webkit-appearance: none;
+    }
+
+    .field-input::placeholder { color: rgba(255,255,255,.2); }
+    .field-input:focus {
+      border-color: var(--amber);
+      background: rgba(255,255,255,.08);
+      box-shadow: 0 0 0 3px rgba(245,158,11,.15);
+    }
+    .field-input:-webkit-autofill {
+      -webkit-box-shadow: 0 0 0 50px #1e3249 inset;
+      -webkit-text-fill-color: #fff;
+    }
+
+    .field-group { margin-bottom: 1.1rem; }
+
+    /* ── Alert ── */
+    .sf-alert {
+      background: rgba(220,38,38,.12);
+      border: 1px solid rgba(220,38,38,.28);
+      border-radius: 10px;
+      color: #fca5a5;
+      font-size: .82rem;
+      padding: .7rem 1rem;
+      margin-bottom: 1.25rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+
+    /* ── Submit ── */
+    .btn-login {
+      width: 100%;
+      background: var(--amber);
+      border: none;
+      border-radius: 10px;
+      color: var(--navy);
+      font-family: inherit;
+      font-size: .92rem;
+      font-weight: 700;
+      padding: .85rem 1rem;
+      cursor: pointer;
+      transition: background .2s, transform .12s, box-shadow .2s;
+      margin-top: .25rem;
+      letter-spacing: .01em;
+    }
+    .btn-login:hover {
+      background: var(--amber2);
+      box-shadow: 0 8px 24px rgba(245,158,11,.35);
+      transform: translateY(-1px);
+    }
+    .btn-login:active { transform: translateY(0); }
+
+    .signup-link {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: .8rem;
+      color: var(--muted);
+    }
+    .signup-link a {
+      color: var(--amber);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .signup-link a:hover { color: var(--amber2); }
+
+    /* ── Bottom status bar ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      margin-top: 1.75rem;
+      font-size: .7rem;
+      color: rgba(255,255,255,.2);
+      letter-spacing: .04em;
+    }
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34,197,94,.2);
+      flex-shrink: 0;
+    }
+  </style>
 </head>
-<body class="bg-light">
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-11 col-sm-8 col-md-5 col-lg-4">
-                <div class="card login-card">
-                    <div class="card-body p-4 p-sm-5">
-                        <div class="text-center mb-4">
-                            <div class="brand-icon mb-2">📦</div>
-                            <h3 class="fw-bold mb-0">StockFlow</h3>
-                            <p class="text-muted small">Inventory & POS System</p>
-                        </div>
-                        {% with messages = get_flashed_messages() %}
-                            {% if messages %}
-                                <div class="alert alert-danger">{{ messages[0] }}</div>
-                            {% endif %}
-                        {% endwith %}
-                        <form method="POST">
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Username</label>
-                                <input type="text" name="username" class="form-control form-control-lg" placeholder="Enter username" required autocomplete="username">
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label fw-semibold">Password</label>
-                                <input type="password" name="password" class="form-control form-control-lg" placeholder="Enter password" required autocomplete="current-password">
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-lg w-100">Login</button>
-                        </form>
-                        <p class="text-center mt-3 mb-0 text-muted small">No account? <a href="/signup">Sign Up</a></p>
-                    </div>
-                </div>
-            </div>
-        </div>
+<body>
+  <div class="login-wrap">
+
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="7" width="9" height="9" rx="2" fill="currentColor" opacity=".9"/>
+          <rect x="13" y="7" width="9" height="9" rx="2" fill="currentColor" opacity=".55"/>
+          <rect x="2" y="2" width="20" height="4" rx="1.5" fill="currentColor" opacity=".4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">StockFlow</div>
+        <div class="brand-tag">Inventory &amp; POS System</div>
+      </div>
     </div>
+
+    <div class="login-card">
+      <div class="card-title">Welcome back</div>
+      <div class="card-sub">Sign in to your workspace</div>
+
+      <!-- Flash messages (Jinja) -->
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="sf-alert">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            {{ messages[0] }}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" autocomplete="on">
+        <div class="field-group">
+          <label class="field-label" for="username">Username</label>
+          <input class="field-input" type="text" id="username" name="username"
+                 placeholder="your username" required autocomplete="username">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="password">Password</label>
+          <input class="field-input" type="password" id="password" name="password"
+                 placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-login">
+          Sign In &nbsp;→
+        </button>
+      </form>
+
+      <div class="signup-link">
+        No account? <a href="/signup">Create one</a>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-dot"></div>
+      All systems operational
+    </div>
+
+  </div>
 </body>
 </html>
