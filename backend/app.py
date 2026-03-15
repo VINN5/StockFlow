@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import os
 from datetime import datetime, timedelta
 from bson.objectid import ObjectId
@@ -49,11 +49,6 @@ def get_business_query():
         except Exception:
             return {}
     return {}
-
-
-@app.route('/health')
-def health():
-    return jsonify({'status': 'ok'}), 200
 
 
 @app.route('/')
@@ -345,8 +340,8 @@ def businesses():
         flash('Access denied: Super Admin only', 'danger')
         return redirect(url_for('dashboard'))
 
-    all_businesses         = list(db.businesses.find().sort("created_at", -1))
-    businesses_with_admins = []
+    all_businesses          = list(db.businesses.find().sort("created_at", -1))
+    businesses_with_admins  = []
     for biz in all_businesses:
         admins = list(db.users.find(
             {"business_id": biz['_id'], "role": "admin"},
