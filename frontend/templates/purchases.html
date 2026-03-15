@@ -58,7 +58,7 @@
             <td data-label="Supplier"><strong>{{ purchase.supplier_name or 'Unknown' }}</strong></td>
             <td data-label="Items">
               <ul class="item-list">
-                {% for item in purchase.items %}
+                {% for item in purchase.get('items', []) %}
                 <li>{{ item.quantity or 0 }} x {{ item.product_name or 'Unknown' }} <span style="color:#7d97ac;">@ KSh {{ "%.2f"|format(item.cost_price or 0) }}</span></li>
                 {% else %}<li style="color:#b3c5cf;">No items</li>{% endfor %}
               </ul>
@@ -95,7 +95,7 @@
             <td data-label="Supplier"><strong>{{ purchase.supplier_name or 'Unknown Supplier' }}</strong></td>
             <td data-label="Items">
               <ul class="item-list">
-                {% for item in purchase.items %}
+                {% for item in purchase.get('items', []) %}
                 <li>{{ item.quantity or 0 }} x {{ item.product_name or 'Unknown' }} <span style="color:#7d97ac;">@ KSh {{ "%.2f"|format(item.cost_price or 0) }}</span></li>
                 {% else %}<li style="color:#b3c5cf;">No items</li>{% endfor %}
               </ul>
