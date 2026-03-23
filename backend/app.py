@@ -25,6 +25,11 @@ app = Flask(
 app.config.from_object(Config)
 app.secret_key = app.config['SECRET_KEY']
 
+# ── Session config — stay logged in for 24 hours ──────────────────────────────
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+app.config['SESSION_COOKIE_SAMESITE']    = 'Lax'
+app.config['SESSION_COOKIE_HTTPONLY']    = True  # prevent JS access to cookie
+
 bcrypt = Bcrypt(app)
 mongo_client = MongoClient(
     app.config["MONGODB_URI"],
@@ -88,12 +93,17 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Already logged in — go straight to dashboard
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
 
         user = db.users.find_one({"username": username})
         if user and bcrypt.check_password_hash(user['password_hash'], password):
+            session.permanent = True   # persist for 24 hours
             session['user_id']     = str(user['_id'])
             session['username']    = user['username']
             session['role']        = user['role']
@@ -234,7 +244,7 @@ def dashboard():
     today_sales_total = daily_sales
 
     # Batch fetch clients for today's sales in one query
-    client_ids = [s['client_id'] for s in today_sales if s.get('client_id')]
+    client_ids  = [s['client_id'] for s in today_sales if s.get('client_id')]
     clients_map = {}
     if client_ids:
         for c in db.clients.find({"_id": {"$in": client_ids}}, {"name": 1}):
