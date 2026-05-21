@@ -15,6 +15,9 @@ from .routes.pos import bp as pos_bp
 from .routes.sales import bp as sales_bp
 from .routes.clients import bp as clients_bp
 from .routes.payments import bp as payments_bp
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 
 app = Flask(
     __name__,
@@ -41,6 +44,16 @@ mongo_client = MongoClient(
 db = mongo_client.stockflow
 app.db = db
 
+# ── Rate limiter ───────────────────────────────────────────────────────────────
+# Default: 200 requests/day, 50/hour for all routes.
+# Sensitive routes get tighter per-route limits defined below.
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    # Store state in memory (switch to Redis in production for multi-worker support)
+    # storage_uri="redis://localhost:6379"
+)
 
 # ── Create indexes on startup for fast queries ────────────────────────────────
 def create_indexes():
@@ -91,7 +104,9 @@ def index():
     return redirect(url_for('login'))
 
 
+# ── Login: 10 attempts/minute per IP to slow brute-force attacks ──────────────
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
     # Already logged in — go straight to dashboard
     if 'user_id' in session:
@@ -123,7 +138,9 @@ def login():
     return render_template('login.html')
 
 
+# ── Signup: 5 attempts/hour — one-time setup route, no need to hammer it ──────
 @app.route('/signup', methods=['GET', 'POST'])
+@limiter.limit("5 per hour", methods=["POST"])
 def signup():
     if db.users.count_documents({}) > 0:
         flash('Signup is disabled. New users must be created by an administrator.', 'info')
@@ -335,7 +352,9 @@ def users():
     return render_template('users.html', users=all_users)
 
 
+# ── Add user: 20/hour — admin action, occasional use ─────────────────────────
 @app.route('/users/add', methods=['POST'])
+@limiter.limit("20 per hour", methods=["POST"])
 def add_user():
     if 'user_id' not in session or session.get('role') not in ['admin', 'super_admin']:
         flash('Access denied', 'danger')
@@ -389,7 +408,9 @@ def delete_user(user_id):
     return redirect(url_for('users'))
 
 
+# ── Password reset: 10/hour — sensitive credential change ────────────────────
 @app.route('/users/reset_password/<user_id>', methods=['POST'])
+@limiter.limit("10 per hour", methods=["POST"])
 def reset_user_password(user_id):
     if 'user_id' not in session or session.get('role') != 'super_admin':
         flash('Access denied: Super Admin only', 'danger')
@@ -444,7 +465,9 @@ def businesses():
     return render_template('businesses.html', businesses=businesses_with_admins)
 
 
+# ── Create business: 10/hour — infrequent super-admin action ─────────────────
 @app.route('/businesses/create', methods=['POST'])
+@limiter.limit("10 per hour", methods=["POST"])
 def create_business():
     if 'user_id' not in session or session.get('role') != 'super_admin':
         flash('Access denied', 'danger')
@@ -483,7 +506,9 @@ def create_business():
     return redirect(url_for('businesses'))
 
 
+# ── Delete business: 5/hour — destructive super-admin action ─────────────────
 @app.route('/businesses/delete/<business_id>', methods=['POST'])
+@limiter.limit("5 per hour", methods=["POST"])
 def delete_business(business_id):
     if 'user_id' not in session or session.get('role') != 'super_admin':
         flash('Access denied', 'danger')
